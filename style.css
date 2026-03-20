@@ -1163,6 +1163,22 @@ h1 span { color: var(--yellow); }
   position: relative;
 }
 
+.foundation-slot::after {
+  content: attr(data-label);
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.66rem;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  color: rgba(255,255,255,0.82);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 .foundation-slot.drop-target {
   border-color: var(--yellow);
   background: rgba(255,201,7,0.12);
@@ -1519,6 +1535,7 @@ h1 span { color: var(--yellow); }
     line-height: 1.1;
     margin-top: 2px;
     display: -webkit-box;
+    line-clamp: 2;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
@@ -1579,6 +1596,38 @@ h1 span { color: var(--yellow); }
 
   .tableau-column {
     min-height: calc(var(--play-card-h) + 155px);
+  }
+}
+
+/* Desktop board layout: tanks on the left, tableau on the right */
+.board-layout {
+  width: 100%;
+}
+
+@media (min-width: 901px) {
+  .board-layout {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: start;
+    column-gap: 18px;
+    width: 100%;
+    max-width: 1380px;
+    margin: 0 auto;
+    padding-left: 14px;
+  }
+
+  .board-layout .tanks-row {
+    display: grid;
+    grid-template-columns: repeat(2, calc(var(--play-card-w) + 8px));
+    gap: 12px;
+    padding: 20px 0 0;
+    justify-content: start;
+    align-content: start;
+  }
+
+  .board-layout .tableau {
+    max-width: none;
+    margin: 0;
   }
 }
 
@@ -1646,6 +1695,7 @@ h1 span { color: var(--yellow); }
   line-height: 1.08;
   margin-top: 2px;
   display: -webkit-box;
+  line-clamp: 3;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
@@ -1659,6 +1709,7 @@ h1 span { color: var(--yellow); }
   margin-top: 2px;
   padding: 2px 3px;
   display: -webkit-box;
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   max-height: 2.6em;

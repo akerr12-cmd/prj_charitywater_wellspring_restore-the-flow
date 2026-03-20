@@ -14,6 +14,7 @@ import { FULL_DECK } from './deck.js';
 const NUM_TABLEAU_COLUMNS = 8;
 const NUM_TANKS = 6; // free cells
 const NUM_FOUNDATIONS = 4; // Tools, Solutions, Challenges, Impact
+const FOUNDATION_LABELS = ['Tools', 'Solutions', 'Challenges Cleared', 'Impact'];
 const DEFAULT_STACK_OFFSET = 26;
 const TIMER_TICK_MS = 250;
 const TWIST_LOCK_SECS = 6;
@@ -287,6 +288,7 @@ function renderFoundations() {
     const slot = document.createElement('div');
     slot.className = 'foundation-slot';
     slot.dataset.foundation = i;
+    slot.dataset.label = FOUNDATION_LABELS[i] || `Foundation ${i + 1}`;
 
     if (pile.length > 0) {
       const topCard = pile[pile.length - 1];
