@@ -31,7 +31,7 @@
         <div class="title-content">
             <!-- Charity: Water logo badge -->
             <div class="logo-badge">
-                <img src="images/cw_logo_horizontal.png" alt="charity: water" height="28" />
+                <img src="images/cw_logo_horizontal.png" alt="charity: water" class="title-logo" />
             </div>
 
             <h1>Pipeline<br /><span>Restoration</span><br>Solitaire</h1>
@@ -227,6 +227,14 @@
                 <button id="reset-btn" class="btn btn-secondary btn-small" aria-label="Restart game">↺ Reset</button>
                 <button id="menu-btn" class="btn btn-secondary btn-small" aria-label="Return to main menu">⬅
                     Menu</button>
+                <label class="balance-control" for="balance-profile">
+                    <span class="balance-label">Pace</span>
+                    <select id="balance-profile" class="balance-select" aria-label="Game pace profile">
+                        <option value="quick">Quick</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </label>
             </div>
 
             <div class="header-right">
@@ -234,7 +242,15 @@
                     ⏱
                     <div>
                         <span class="label">Time</span>
-                        <span class="value" id="timer-value">3:00</span>
+                        <span class="value" id="timer-value">0:00</span>
+                    </div>
+                </div>
+
+                <div class="stat-chip" id="best-time-display" aria-live="polite">
+                    🏁
+                    <div>
+                        <span class="label">Best</span>
+                        <span class="value" id="best-time-value">--:--</span>
                     </div>
                 </div>
 

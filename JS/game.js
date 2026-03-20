@@ -24,7 +24,6 @@ const MATCH_SCORE = {
   impact:             200,
 };
 
-const GAME_DURATION   = 180;   // seconds
 const HEATWAVE_SECS   = 15;    // seconds heatwave lasts
 const MAX_SKIPS       = 3;
 const SKIP_SCORE_COST = 25;
@@ -46,7 +45,7 @@ function freshState() {
     scoreMultiplier: 1,
     multiplierTimer: null,
     wellProgress: 0,           // 0–100
-    timeLeft: GAME_DURATION,
+    timeElapsed: 0,
     timerInterval: null,
     timerMultiplier: 1,        // 1 = normal, 2 = heatwave
     heatwaveTimeout: null,
@@ -96,6 +95,9 @@ function showScreen(name) {
   Object.values(screens).forEach(s => s.classList.remove('active'));
   if (screens[name]) screens[name].classList.add('active');
 }
+
+// Expose for module-to-module coordination (solitaire engine win flow).
+window.showScreen = showScreen;
 
 let isStartingGame = false;
 
@@ -210,24 +212,19 @@ function startTimer() {
 
 function tickTimer() {
   if (state.isPaused || state.gameOver) return;
-  state.timeLeft -= state.timerMultiplier;
+  state.timeElapsed += state.timerMultiplier;
   updateTimer();
-  if (state.timeLeft <= 0) {
-    state.timeLeft = 0;
-    updateTimer();
-    gameOver();
-  }
 }
 
 function updateTimer() {
-  const secs = Math.max(0, Math.ceil(state.timeLeft));
+  const secs = Math.max(0, Math.floor(state.timeElapsed));
   const mins = Math.floor(secs / 60);
   const s    = secs % 60;
   const display = $('timer-value');
   const chip    = $('timer-display');
   if (display) display.textContent = `${mins}:${s.toString().padStart(2, '0')}`;
   if (chip) {
-    chip.classList.toggle('warning', secs <= 30);
+    chip.classList.remove('warning');
   }
 }
 
@@ -528,7 +525,19 @@ function goToImpact() {
 }
 
 function populateImpactScreen() {
-  const timeTaken = GAME_DURATION - Math.max(0, state.timeLeft);
+  if (typeof window.getSolitaireRunStats === 'function') {
+    const stats = window.getSolitaireRunStats();
+    if (stats) {
+      setText('impact-score',      Number(stats.score || 0).toLocaleString());
+      setText('impact-challenges', stats.challenges ?? 0);
+      setText('impact-people',     stats.people ?? 0);
+      setText('impact-time',       stats.timeLabel || '0:00');
+      setText('impact-progress',   `${Math.round(stats.progress || 0)}%`);
+      return;
+    }
+  }
+
+  const timeTaken = Math.max(0, Math.floor(state.timeElapsed));
   const mins = Math.floor(timeTaken / 60);
   const secs = timeTaken % 60;
 
@@ -660,6 +669,9 @@ function startConfetti() {
   window.addEventListener('beforeunload', () => cancelAnimationFrame(animId), { once: true });
 }
 
+// Expose for module-to-module coordination (solitaire engine win flow).
+window.startConfetti = startConfetti;
+
 // =============================================
 // FLOATING DROPLETS (title screen atmosphere)
 // =============================================
@@ -703,6 +715,32 @@ document.addEventListener('DOMContentLoaded', () => {
   import('./solitaire.js').catch(() => {
     // No-op: startSelectedMode has fallback handling.
   });
+
+  const balanceSelect = $('balance-profile');
+  if (balanceSelect) {
+    try {
+      const savedProfile = localStorage.getItem('cw.balanceProfile');
+      if (savedProfile) balanceSelect.value = savedProfile;
+    } catch (_) {
+      // Ignore storage failures.
+    }
+
+    balanceSelect.addEventListener('change', async e => {
+      const profile = e.target.value;
+      if (typeof window.setBalanceProfile === 'function') {
+        window.setBalanceProfile(profile);
+        return;
+      }
+      try {
+        await import('./solitaire.js');
+        if (typeof window.setBalanceProfile === 'function') {
+          window.setBalanceProfile(profile);
+        }
+      } catch (_) {
+        // Ignore: selector will apply once module is available.
+      }
+    });
+  }
 
   // Title screen
   $('start-btn')?.addEventListener('click',    startSelectedMode);

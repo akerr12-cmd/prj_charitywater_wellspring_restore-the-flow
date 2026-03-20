@@ -15,6 +15,65 @@ const NUM_TABLEAU_COLUMNS = 8;
 const NUM_TANKS = 6; // free cells
 const NUM_FOUNDATIONS = 4; // Tools, Solutions, Challenges, Impact
 const STACK_OFFSET = 26; // slightly tighter, more elegant
+const TIMER_TICK_MS = 250;
+const TWIST_LOCK_SECS = 6;
+const TWIST_SCORE_PENALTY = 35;
+
+const BALANCE_PROFILES = {
+  quick: {
+    toolSolutionScore: 90,
+    challengeSolutionScore: 160,
+    impactScore: 200,
+    toolSolutionProgress: 3,
+    challengeSolutionProgress: 6,
+    impactProgress: 5,
+    maxMultiplier: 4,
+  },
+  medium: {
+    toolSolutionScore: 80,
+    challengeSolutionScore: 140,
+    impactScore: 180,
+    toolSolutionProgress: 2,
+    challengeSolutionProgress: 4,
+    impactProgress: 3,
+    maxMultiplier: 3,
+  },
+  hard: {
+    toolSolutionScore: 70,
+    challengeSolutionScore: 130,
+    impactScore: 160,
+    toolSolutionProgress: 1,
+    challengeSolutionProgress: 3,
+    impactProgress: 2,
+    maxMultiplier: 2,
+  },
+};
+
+let BALANCE_PROFILE = 'medium';
+let BALANCE = BALANCE_PROFILES[BALANCE_PROFILE];
+
+function setBalanceProfile(profileName) {
+  if (!BALANCE_PROFILES[profileName]) return false;
+  BALANCE_PROFILE = profileName;
+  BALANCE = BALANCE_PROFILES[profileName];
+  try {
+    localStorage.setItem('cw.balanceProfile', profileName);
+  } catch (_) {
+    // Ignore storage failures in constrained environments.
+  }
+  return true;
+}
+
+function applyStoredBalanceProfile() {
+  try {
+    const saved = localStorage.getItem('cw.balanceProfile');
+    if (saved && BALANCE_PROFILES[saved]) {
+      setBalanceProfile(saved);
+    }
+  } catch (_) {
+    // Ignore storage access failures.
+  }
+}
 
 /* ------------------------------------------------------------
    2. GAME STATE
@@ -33,6 +92,10 @@ let S = {
   gameOver: false,
   score: 0,
   progress: 0,
+  multiplier: 1,
+  elapsedSeconds: 0,
+  startedAtMs: 0,
+  timerInterval: null,
 };
 
 /* ------------------------------------------------------------
@@ -40,6 +103,9 @@ let S = {
 ------------------------------------------------------------ */
 
 export function initSolitaireGame() {
+  applyStoredBalanceProfile();
+  stopElapsedTimer();
+
   S = {
     ...S,
     deck: shuffle([...FULL_DECK]),
@@ -54,9 +120,15 @@ export function initSolitaireGame() {
     gameOver: false,
     score: 0,
     progress: 0,
+    multiplier: 1,
+    elapsedSeconds: 0,
+    startedAtMs: Date.now(),
+    timerInterval: null,
   };
 
+  startElapsedTimer();
   dealInitialLayout();
+  updateHUD();
   renderBoard();
 }
 
@@ -187,6 +259,12 @@ function buildCardEl(card) {
 
   // Face-down state
   if (card.faceDown) el.classList.add('facedown');
+  else el.classList.add('faceup');
+
+  if (card.justRevealed) {
+    el.classList.add('reveal-flip');
+    card.justRevealed = false;
+  }
 
   // Locked state
   if (card.locked) el.classList.add('locked');
@@ -205,6 +283,8 @@ function buildCardEl(card) {
      CARD FRONT (Option B Layout)
      ------------------------------------------------------------ */
   const twistIcon = card.twist ? '<span class="card-twist-icon">⚠️</span>' : '';
+  const actionHint = getCardActionHint(card);
+  const typeLabel = getCardTypeLabel(card);
 
   el.innerHTML = `
     <div class="card-inner">
@@ -224,7 +304,7 @@ function buildCardEl(card) {
 
         <!-- Top bar -->
         <div class="card-top-bar">
-          <span class="card-type-badge">${card.type}</span>
+          <span class="card-type-badge">${typeLabel}</span>
           ${twistIcon}
         </div>
 
@@ -233,6 +313,9 @@ function buildCardEl(card) {
 
         <!-- Name -->
         <div class="card-name">${card.name}</div>
+
+        <!-- Action hint -->
+        <div class="card-hint">${actionHint}</div>
 
         <!-- Pair ID -->
         <div class="card-id">#${card.pairId}</div>
@@ -293,6 +376,7 @@ function startDrag(card, el, event) {
   el.style.left = `${rect.left}px`;
   el.style.top = `${rect.top}px`;
   el.style.zIndex = 9999;
+  el.style.pointerEvents = 'none';
 
   el.classList.add('dragging');
   highlightDropTargets(card);
@@ -326,6 +410,7 @@ function onDragEnd(event) {
 
   // Reset drag state
   S.dragEl.classList.remove('dragging');
+  S.dragEl.style.pointerEvents = '';
   S.dragEl.style = '';
   S.isDragging = false;
   S.dragEl = null;
@@ -420,6 +505,7 @@ function moveToTank(tankIndex) {
   removeCardFromOrigin(S.selectedCard);
   S.tanks[tankIndex] = S.selectedCard;
 
+  revealNextCardInOrigin();
   renderBoard();
 }
 
@@ -431,7 +517,9 @@ function moveToFoundation(fIndex) {
   removeCardFromOrigin(S.selectedCard);
   pile.push(S.selectedCard);
 
+  revealNextCardInOrigin();
   updateProgress();
+  updateHUD();
   renderBoard();
 }
 
@@ -448,27 +536,57 @@ function moveToTableau(colIndex) {
 
   handlePostMoveEffects(topBefore, topAfter, column, colIndex);
   revealNextCardInOrigin();
+  updateHUD();
   renderBoard();
 }
 
 function handlePostMoveEffects(prevTop, newTop, column, colIndex) {
   if (!prevTop) return;
 
-  if (prevTop.twist) animateTwist(prevTop);
-  if (newTop.twist) animateTwist(newTop);
+  if (prevTop.twist) {
+    animateTwist(prevTop);
+    applyTwistPenalty(prevTop);
+  }
+  if (newTop.twist) {
+    animateTwist(newTop);
+    applyTwistPenalty(newTop);
+  }
 
   const matchType = getMatchType(prevTop, newTop);
+  const prevType = getCardType(prevTop);
+  const newType = getCardType(newTop);
+
+  if (prevType === 'tool' && newType === 'solution') {
+    addScore(BALANCE.toolSolutionScore);
+    updateProgress(BALANCE.toolSolutionProgress);
+  }
 
   if (matchType === 'challenge_solution') {
     const challengeCard = getCardType(prevTop) === 'challenge' ? prevTop : newTop;
     animateTwist(challengeCard);
-    // Clear challenge, update progress, maybe move a "cleared" marker to foundation 2
-    // TODO: implement your challenge-clearing logic here
+    const challengeIndex = column.indexOf(challengeCard);
+    if (challengeIndex !== -1) {
+      column.splice(challengeIndex, 1);
+      S.foundations[2].push(challengeCard);
+    }
+    addScore(BALANCE.challengeSolutionScore);
+    updateProgress(BALANCE.challengeSolutionProgress);
+  }
+
+  if (prevType === 'solution' && newType === 'impact') {
+    S.multiplier = Math.min(S.multiplier + 1, BALANCE.maxMultiplier);
+    addScore(BALANCE.impactScore);
+    updateProgress(BALANCE.impactProgress);
   }
 
   if (matchType === 'impact') {
-    // Impact combo: score multiplier, people helped, etc.
-    // TODO: implement your impact logic here
+    S.multiplier = Math.min(S.multiplier + 1, BALANCE.maxMultiplier);
+    addScore(BALANCE.impactScore);
+    updateProgress(BALANCE.impactProgress);
+  }
+
+  if (newType !== 'impact' && !(prevType === 'solution' && newType === 'impact')) {
+    S.multiplier = 1;
   }
 }
 
@@ -480,12 +598,104 @@ function animateTwist(card) {
   setTimeout(() => el.classList.remove('twist-activated'), 1200);
 }
 
+function applyTwistPenalty(card) {
+  if (!card?.twist) return;
+
+  stateScorePenalty(TWIST_SCORE_PENALTY);
+  const lockedCard = lockRandomPlayableCard(TWIST_LOCK_SECS);
+
+  if (lockedCard) {
+    showSolitaireToast(`${card.name} twist: ${lockedCard.name} locked for ${TWIST_LOCK_SECS}s. -${TWIST_SCORE_PENALTY} points.`);
+  } else {
+    showSolitaireToast(`${card.name} twist: -${TWIST_SCORE_PENALTY} points.`);
+  }
+
+  updateHUD();
+}
+
+function stateScorePenalty(amount) {
+  S.score = Math.max(0, S.score - Math.max(0, amount));
+}
+
+function lockRandomPlayableCard(durationSecs) {
+  const candidates = [];
+
+  for (let col = 0; col < S.tableau.length; col++) {
+    const top = S.tableau[col][S.tableau[col].length - 1];
+    if (!top) continue;
+    if (top.faceDown || top.locked) continue;
+    candidates.push(top);
+  }
+
+  for (let i = 0; i < S.tanks.length; i++) {
+    const card = S.tanks[i];
+    if (!card) continue;
+    if (card.faceDown || card.locked) continue;
+    candidates.push(card);
+  }
+
+  if (candidates.length === 0) return null;
+
+  const lockedCard = candidates[Math.floor(Math.random() * candidates.length)];
+  lockedCard.locked = true;
+
+  setTimeout(() => {
+    lockedCard.locked = false;
+    if (!S.gameOver) renderBoard();
+  }, durationSecs * 1000);
+
+  return lockedCard;
+}
+
+function showSolitaireToast(message) {
+  const toastEl = document.getElementById('toast');
+  if (!toastEl) return;
+
+  toastEl.textContent = message;
+  toastEl.className = 'toast type-twist show';
+  setTimeout(() => {
+    if (toastEl.textContent === message) {
+      toastEl.classList.remove('show');
+    }
+  }, 2400);
+}
+
 /* ------------------------------------------------------------
    9. HELPER FUNCTIONS
 ------------------------------------------------------------ */
 
 function getCardType(card) {
   return card.type; // 'tool' | 'challenge' | 'solution' | 'impact'
+}
+
+function getCardTypeLabel(card) {
+  if (card.type === 'tool') return 'Tool';
+  if (card.type === 'challenge') return 'Challenge';
+  if (card.type === 'solution') return 'Solution';
+  if (card.type === 'impact') return 'Impact';
+  return card.type;
+}
+
+function getCardActionHint(card) {
+  if (card.type === 'tool') {
+    return 'Play onto Tool or before Solution';
+  }
+
+  if (card.type === 'challenge') {
+    const solution = FULL_DECK.find(c => c.type === 'solution' && c.pairId === card.pairId);
+    return solution ? `Needs: ${solution.name}` : 'Clear with matching Solution';
+  }
+
+  if (card.type === 'solution') {
+    const challenge = FULL_DECK.find(c => c.type === 'challenge' && c.id === card.pairId);
+    return challenge ? `Fixes: ${challenge.name}` : 'Place on matching Challenge';
+  }
+
+  if (card.type === 'impact') {
+    return 'Play after Solution to build multiplier';
+  }
+
+  return 'Use strategically';
 }
 
 function getMatchType(a, b) {
@@ -620,6 +830,7 @@ function revealNextCardInOrigin() {
   // Reveal if face-down
   if (topCard.faceDown) {
     topCard.faceDown = false;
+    topCard.justRevealed = true;
     // Optional: add a flip animation delay
   }
 }
@@ -628,15 +839,156 @@ function revealNextCardInOrigin() {
    13. PROGRESS + WIN CONDITION
 ------------------------------------------------------------ */
 
-function updateProgress() {
-  // TODO: update S.progress based on foundations
+function updateProgress(delta) {
+  if (typeof delta === 'number' && delta !== 0) {
+    S.progress = Math.min(100, Math.max(0, S.progress + delta));
+  }
+
+  // Foundation-based baseline progress plus any bonus progress gained from combos.
+  const toolsProgress = (S.foundations[0].length / 12) * 30;
+  const solutionsProgress = (S.foundations[1].length / 12) * 30;
+  const clearedChallengesProgress = (S.foundations[2].length / 12) * 20;
+  const impactProgress = (S.foundations[3].length / 16) * 20;
+  const foundationBaseline = toolsProgress + solutionsProgress + clearedChallengesProgress + impactProgress;
+  S.progress = Math.max(S.progress, Math.round(foundationBaseline));
+  if (S.progress > 100) S.progress = 100;
+
+  updateHUD();
   if (S.progress >= 100) triggerWin();
+}
+
+function addScore(baseAmount) {
+  const gained = Math.round(baseAmount * S.multiplier);
+  S.score += gained;
+}
+
+function updateHUD() {
+  const scoreEl = document.getElementById('score-value');
+  if (scoreEl) scoreEl.textContent = String(S.score);
+
+  const progressLabelEl = document.getElementById('progress-label');
+  if (progressLabelEl) progressLabelEl.textContent = `Well ${S.progress}% Restored`;
+
+  const progressFillEl = document.getElementById('progress-fill');
+  if (progressFillEl) progressFillEl.style.width = `${S.progress}%`;
+
+  const progressTrackEl = document.querySelector('.progress-bar-track');
+  if (progressTrackEl) progressTrackEl.setAttribute('aria-valuenow', String(S.progress));
+
+  const multiplierBadgeEl = document.getElementById('multiplier-badge');
+  if (multiplierBadgeEl) {
+    multiplierBadgeEl.textContent = `${S.multiplier}x Score!`;
+    if (S.multiplier > 1) multiplierBadgeEl.classList.add('active');
+    else multiplierBadgeEl.classList.remove('active');
+  }
+
+  updateTimerUI();
+  updateBestTimeUI();
 }
 
 function triggerWin() {
   S.gameOver = true;
-  showScreen('win');
-  startConfetti();
+  stopElapsedTimer();
+  saveBestTime();
+
+  if (typeof window.showScreen === 'function') {
+    window.showScreen('win');
+  } else {
+    document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+    const winScreen = document.getElementById('win-screen');
+    if (winScreen) winScreen.classList.add('active');
+  }
+
+  if (typeof window.startConfetti === 'function') {
+    window.startConfetti();
+  }
+}
+
+function startElapsedTimer() {
+  S.startedAtMs = Date.now();
+  S.elapsedSeconds = 0;
+  S.timerInterval = setInterval(() => {
+    if (S.gameOver) return;
+    S.elapsedSeconds = Math.max(0, Math.floor((Date.now() - S.startedAtMs) / 1000));
+    updateTimerUI();
+  }, TIMER_TICK_MS);
+}
+
+function stopElapsedTimer() {
+  if (!S.timerInterval) return;
+  clearInterval(S.timerInterval);
+  S.timerInterval = null;
+}
+
+function formatDuration(totalSeconds) {
+  const secs = Math.max(0, Math.floor(totalSeconds));
+  const mins = Math.floor(secs / 60);
+  const rem = secs % 60;
+  return `${mins}:${String(rem).padStart(2, '0')}`;
+}
+
+function getBestTimeStorageKey() {
+  return `cw.bestTime.${BALANCE_PROFILE}`;
+}
+
+function getBestTimeSeconds() {
+  try {
+    const raw = localStorage.getItem(getBestTimeStorageKey());
+    if (!raw) return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function saveBestTime() {
+  const current = Math.max(0, Math.floor(S.elapsedSeconds));
+  if (current <= 0) return;
+
+  const best = getBestTimeSeconds();
+  if (best !== null && best <= current) {
+    updateBestTimeUI();
+    return;
+  }
+
+  try {
+    localStorage.setItem(getBestTimeStorageKey(), String(current));
+  } catch (_) {
+    // Ignore storage failures in constrained environments.
+  }
+
+  updateBestTimeUI();
+}
+
+function updateTimerUI() {
+  const timerValueEl = document.getElementById('timer-value');
+  if (timerValueEl) timerValueEl.textContent = formatDuration(S.elapsedSeconds);
+
+  const timerDisplayEl = document.getElementById('timer-display');
+  if (timerDisplayEl) timerDisplayEl.classList.remove('warning');
+}
+
+function updateBestTimeUI() {
+  const bestEl = document.getElementById('best-time-value');
+  if (!bestEl) return;
+
+  const best = getBestTimeSeconds();
+  bestEl.textContent = best === null ? '--:--' : formatDuration(best);
+}
+
+function getSolitaireRunStats() {
+  const best = getBestTimeSeconds();
+  return {
+    score: S.score,
+    progress: S.progress,
+    challenges: S.foundations[2].length,
+    people: S.foundations[3].length * 50,
+    timeSeconds: Math.max(0, Math.floor(S.elapsedSeconds)),
+    timeLabel: formatDuration(S.elapsedSeconds),
+    bestTimeSeconds: best,
+    bestTimeLabel: best === null ? '--:--' : formatDuration(best),
+  };
 }
 
 /* ------------------------------------------------------------
@@ -653,3 +1005,5 @@ function shuffle(arr) {
 
 // Expose initializer for the non-module UI controller in game.js.
 window.initSolitaireGame = initSolitaireGame;
+window.setBalanceProfile = setBalanceProfile;
+window.getSolitaireRunStats = getSolitaireRunStats;
