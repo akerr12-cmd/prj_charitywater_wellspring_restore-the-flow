@@ -1,0 +1,13 @@
+pipeline-restoration-solitaire/
+  index.html
+  /css
+    style.css
+  /js
+    game.js
+    ui.js
+    data.js
+  /assets
+    cards/
+    ui/
+    audio/
+
