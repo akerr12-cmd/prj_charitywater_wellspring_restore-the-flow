@@ -65,17 +65,28 @@ export function initSolitaireGame() {
 ------------------------------------------------------------ */
 
 function dealInitialLayout() {
-  // Deal cards into 8 columns, layered
+  // Deal cards into 8 columns while never overrunning the deck.
   let deckIndex = 0;
+  let remaining = S.deck.length;
 
   for (let col = 0; col < NUM_TABLEAU_COLUMNS; col++) {
-    const depth = 6 + Math.floor(Math.random() * 3); // 6–8 cards per column
+    const colsLeft = NUM_TABLEAU_COLUMNS - col;
+    const minForRemainingCols = (colsLeft - 1) * 6;
+
+    // Keep 6-8 cards per column when possible, clamped by remaining cards.
+    const maxDepth = Math.min(8, remaining - minForRemainingCols);
+    const minDepth = Math.min(6, maxDepth);
+    const depth = minDepth + Math.floor(Math.random() * (maxDepth - minDepth + 1));
+
     for (let i = 0; i < depth; i++) {
       const card = S.deck[deckIndex++];
+      if (!card) break;
       card.faceDown = i < depth - 1; // all but last card face-down
       card.locked = false;
       S.tableau[col].push(card);
     }
+
+    remaining = S.deck.length - deckIndex;
   }
 
   // Remaining cards go to a draw pile (optional future feature)
@@ -86,33 +97,45 @@ function dealInitialLayout() {
 ------------------------------------------------------------ */
 
 function renderBoard() {
-  renderTableau();
+  ensureTableauColumns();
+  for (let col = 0; col < NUM_TABLEAU_COLUMNS; col++) {
+    renderTableauColumn(col);
+  }
   renderTanks();
   renderFoundations();
 }
 
 /* ---------------- TABLEAU ---------------- */
 
-function renderTableau() {
+function ensureTableauColumns() {
   const container = document.getElementById('tableau');
-  container.innerHTML = '';
+  if (container.querySelectorAll('.tableau-column').length === NUM_TABLEAU_COLUMNS) {
+    return;
+  }
 
-  S.tableau.forEach((column, colIndex) => {
+  container.innerHTML = '';
+  for (let colIndex = 0; colIndex < NUM_TABLEAU_COLUMNS; colIndex++) {
     const colEl = document.createElement('div');
     colEl.className = 'tableau-column';
     colEl.dataset.col = colIndex;
-
-    column.forEach((card, depth) => {
-      const cardEl = buildCardEl(card);
-      cardEl.style.top = `${depth * STACK_OFFSET}px`;
-      cardEl.style.transition = 'top 0.25s ease';
-      cardEl.dataset.col = colIndex;
-      cardEl.dataset.index = depth;
-
-      colEl.appendChild(cardEl);
-    });
-
     container.appendChild(colEl);
+  }
+}
+
+function renderTableauColumn(colIndex) {
+  const container = document.querySelector(`.tableau-column[data-col="${colIndex}"]`);
+  const column = S.tableau[colIndex];
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  column.forEach((card, depth) => {
+    const cardEl = buildCardEl(card);
+    cardEl.style.top = `${depth * STACK_OFFSET}px`;
+    cardEl.style.transition = 'top 0.25s ease';
+    cardEl.dataset.col = colIndex;
+    cardEl.dataset.index = depth;
+    container.appendChild(cardEl);
   });
 }
 
@@ -262,6 +285,15 @@ function startDrag(card, el, event) {
   S.dragEl = el;
   S.selectedCard = card;
 
+  // Lock card size before moving to fixed positioning so it does not expand to viewport width.
+  const rect = el.getBoundingClientRect();
+  el.style.width = `${rect.width}px`;
+  el.style.height = `${rect.height}px`;
+  el.style.position = 'fixed';
+  el.style.left = `${rect.left}px`;
+  el.style.top = `${rect.top}px`;
+  el.style.zIndex = 9999;
+
   el.classList.add('dragging');
   highlightDropTargets(card);
 
@@ -277,10 +309,8 @@ function onDragMove(event) {
   const x = event.touches ? event.touches[0].clientX : event.clientX;
   const y = event.touches ? event.touches[0].clientY : event.clientY;
 
-  S.dragEl.style.position = 'fixed';
   S.dragEl.style.left = `${x - 40}px`;
   S.dragEl.style.top = `${y - 60}px`;
-  S.dragEl.style.zIndex = 9999;
 }
 
 function onDragEnd(event) {
@@ -424,9 +454,14 @@ function moveToTableau(colIndex) {
 function handlePostMoveEffects(prevTop, newTop, column, colIndex) {
   if (!prevTop) return;
 
+  if (prevTop.twist) animateTwist(prevTop);
+  if (newTop.twist) animateTwist(newTop);
+
   const matchType = getMatchType(prevTop, newTop);
 
   if (matchType === 'challenge_solution') {
+    const challengeCard = getCardType(prevTop) === 'challenge' ? prevTop : newTop;
+    animateTwist(challengeCard);
     // Clear challenge, update progress, maybe move a "cleared" marker to foundation 2
     // TODO: implement your challenge-clearing logic here
   }
@@ -435,6 +470,14 @@ function handlePostMoveEffects(prevTop, newTop, column, colIndex) {
     // Impact combo: score multiplier, people helped, etc.
     // TODO: implement your impact logic here
   }
+}
+
+function animateTwist(card) {
+  const el = document.querySelector(`[data-card-id="${card.id}"]`);
+  if (!el) return;
+
+  el.classList.add('twist-activated');
+  setTimeout(() => el.classList.remove('twist-activated'), 1200);
 }
 
 /* ------------------------------------------------------------

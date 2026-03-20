@@ -510,6 +510,22 @@ h1 span { color: var(--yellow); }
 .card-twist-icon {
   font-size: 1rem;
   filter: drop-shadow(0 0 4px rgba(0,0,0,0.4));
+  animation: twistPulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes twistPulse {
+  from { transform: scale(1); opacity: 0.8; }
+  to   { transform: scale(1.2); opacity: 1; }
+}
+
+.twist-activated .card-inner {
+  animation: twistFlash 0.6s ease;
+}
+
+@keyframes twistFlash {
+  0% { filter: brightness(1); }
+  50% { filter: brightness(1.6); }
+  100% { filter: brightness(1); }
 }
 
 /* ---------------- CENTER EMOJI ---------------- */

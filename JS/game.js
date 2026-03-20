@@ -97,24 +97,39 @@ function showScreen(name) {
   if (screens[name]) screens[name].classList.add('active');
 }
 
+let isStartingGame = false;
+
 async function startSelectedMode() {
-  if (typeof window.initSolitaireGame !== 'function') {
-    try {
+  if (isStartingGame) return;
+  isStartingGame = true;
+
+  const startBtn = $('start-btn');
+  if (startBtn) startBtn.disabled = true;
+
+  try {
+    if (typeof window.initSolitaireGame !== 'function') {
       await import('./solitaire.js');
-    } catch (e) {
-      // Keep legacy mode available if solitaire module cannot be loaded.
-      initGame();
+    }
+
+    if (typeof window.initSolitaireGame === 'function') {
+      window.initSolitaireGame();
+      showScreen('game');
       return;
     }
-  }
 
-  if (typeof window.initSolitaireGame === 'function') {
-    window.initSolitaireGame();
-    showScreen('game');
-    return;
+    // Fallback to legacy mode if solitaire initializer is unavailable.
+    initGame();
+  } catch (e) {
+    console.error('Failed to start selected mode. Falling back to legacy init.', e);
+    try {
+      initGame();
+    } catch (fallbackError) {
+      console.error('Legacy init also failed.', fallbackError);
+    }
+  } finally {
+    isStartingGame = false;
+    if (startBtn) startBtn.disabled = false;
   }
-
-  initGame();
 }
 
 // =============================================
@@ -684,6 +699,11 @@ function closeModal(id) {
 // =============================================
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Preload solitaire module so first Start click is immediate.
+  import('./solitaire.js').catch(() => {
+    // No-op: startSelectedMode has fallback handling.
+  });
+
   // Title screen
   $('start-btn')?.addEventListener('click',    startSelectedMode);
   $('how-to-btn')?.addEventListener('click',   () => openModal('how-to-modal'));
