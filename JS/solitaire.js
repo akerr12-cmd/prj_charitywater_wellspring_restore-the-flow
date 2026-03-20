@@ -11,13 +11,14 @@ import { FULL_DECK } from './deck.js';
    1. GAME CONSTANTS
 ------------------------------------------------------------ */
 
-const NUM_TABLEAU_COLUMNS = 8;
+const NUM_TABLEAU_COLUMNS = 6;
 const NUM_TANKS = 6; // free cells
 const NUM_FOUNDATIONS = 4; // Tools, Solutions, Challenges, Impact
-const STACK_OFFSET = 26; // slightly tighter, more elegant
+const DEFAULT_STACK_OFFSET = 26;
 const TIMER_TICK_MS = 250;
 const TWIST_LOCK_SECS = 6;
 const TWIST_SCORE_PENALTY = 35;
+const DOUBLE_SCORE_TURNS = 3;
 
 const BALANCE_PROFILES = {
   quick: {
@@ -93,10 +94,18 @@ let S = {
   score: 0,
   progress: 0,
   multiplier: 1,
+  boosters: { hint: 0, double: 0 },
+  doubleScoreMoves: 0,
+  nextBoosterProgress: 20,
+  challengeClears: 0,
   elapsedSeconds: 0,
   startedAtMs: 0,
   timerInterval: null,
 };
+
+let resizeListenerBound = false;
+let resizeRenderTimeout = null;
+let hintHighlightTimeout = null;
 
 /* ------------------------------------------------------------
    3. INITIALIZATION
@@ -105,6 +114,7 @@ let S = {
 export function initSolitaireGame() {
   applyStoredBalanceProfile();
   stopElapsedTimer();
+  bindResponsiveLayoutListeners();
 
   S = {
     ...S,
@@ -121,6 +131,10 @@ export function initSolitaireGame() {
     score: 0,
     progress: 0,
     multiplier: 1,
+    boosters: { hint: 1, double: 0 },
+    doubleScoreMoves: 0,
+    nextBoosterProgress: 20,
+    challengeClears: 0,
     elapsedSeconds: 0,
     startedAtMs: Date.now(),
     timerInterval: null,
@@ -130,6 +144,23 @@ export function initSolitaireGame() {
   dealInitialLayout();
   updateHUD();
   renderBoard();
+}
+
+function bindResponsiveLayoutListeners() {
+  if (resizeListenerBound) return;
+  resizeListenerBound = true;
+
+  const onViewportChange = () => {
+    if (resizeRenderTimeout) clearTimeout(resizeRenderTimeout);
+    resizeRenderTimeout = setTimeout(() => {
+      if (S.isDragging) return;
+      renderBoard();
+      updateHUD();
+    }, 120);
+  };
+
+  window.addEventListener('resize', onViewportChange);
+  window.addEventListener('orientationchange', onViewportChange);
 }
 
 /* ------------------------------------------------------------
@@ -199,16 +230,41 @@ function renderTableauColumn(colIndex) {
   const column = S.tableau[colIndex];
   if (!container) return;
 
+  const stackOffset = getConfiguredStackOffset();
+
   container.innerHTML = '';
 
   column.forEach((card, depth) => {
     const cardEl = buildCardEl(card);
-    cardEl.style.top = `${depth * STACK_OFFSET}px`;
+    cardEl.style.top = `${depth * stackOffset}px`;
     cardEl.style.transition = 'top 0.25s ease';
     cardEl.dataset.col = colIndex;
     cardEl.dataset.index = depth;
     container.appendChild(cardEl);
   });
+
+  // Ensure each grid cell reserves enough vertical space for the full stack.
+  const cardHeight = getConfiguredCardHeight();
+  const stackDepth = Math.max(0, column.length - 1);
+  const requiredHeight = cardHeight + stackDepth * stackOffset + 20;
+  const minMobileHeight = cardHeight + 190;
+  container.style.minHeight = `${Math.max(minMobileHeight, requiredHeight)}px`;
+}
+
+function getConfiguredCardHeight() {
+  const cssValue = getComputedStyle(document.documentElement)
+    .getPropertyValue('--play-card-h')
+    .trim();
+  const parsed = Number.parseFloat(cssValue);
+  return Number.isFinite(parsed) ? parsed : 120;
+}
+
+function getConfiguredStackOffset() {
+  const cssValue = getComputedStyle(document.documentElement)
+    .getPropertyValue('--stack-offset')
+    .trim();
+  const parsed = Number.parseFloat(cssValue);
+  return Number.isFinite(parsed) ? parsed : DEFAULT_STACK_OFFSET;
 }
 
 /* ---------------- TANKS ---------------- */
@@ -569,6 +625,10 @@ function handlePostMoveEffects(prevTop, newTop, column, colIndex) {
       column.splice(challengeIndex, 1);
       S.foundations[2].push(challengeCard);
     }
+    S.challengeClears += 1;
+    if (S.challengeClears % 2 === 0) {
+      grantBooster('hint', 1, 'Challenge streak reward');
+    }
     addScore(BALANCE.challengeSolutionScore);
     updateProgress(BALANCE.challengeSolutionProgress);
   }
@@ -658,6 +718,133 @@ function showSolitaireToast(message) {
       toastEl.classList.remove('show');
     }
   }, 2400);
+}
+
+function grantBooster(type, amount = 1, reason = '') {
+  if (!S.boosters[type]) S.boosters[type] = 0;
+  S.boosters[type] += Math.max(0, amount);
+
+  const label = type === 'hint' ? 'Hint' : 'Double Score';
+  const suffix = reason ? ` (${reason})` : '';
+  showSolitaireToast(`+${amount} ${label} booster${amount > 1 ? 's' : ''}${suffix}`);
+}
+
+function awardProgressBoosters() {
+  while (S.progress >= S.nextBoosterProgress && S.nextBoosterProgress <= 100) {
+    const type = S.nextBoosterProgress % 40 === 0 ? 'double' : 'hint';
+    grantBooster(type, 1, `${S.nextBoosterProgress}% restored`);
+    S.nextBoosterProgress += 20;
+  }
+}
+
+function renderBoosterBar() {
+  const barEl = document.getElementById('booster-bar');
+  if (!barEl) return;
+
+  const hintCount = S.boosters.hint || 0;
+  const doubleCount = S.boosters.double || 0;
+  const doubleActive = S.doubleScoreMoves > 0 ? ` (${S.doubleScoreMoves})` : '';
+
+  barEl.innerHTML = `
+    <button class="booster ${hintCount === 0 ? 'used' : ''}" data-booster="hint" ${hintCount === 0 || S.gameOver ? 'disabled' : ''} title="Reveal a suggested move">
+      🔎 Hint x${hintCount}
+    </button>
+    <button class="booster ${doubleCount === 0 ? 'used' : ''}" data-booster="double" ${doubleCount === 0 || S.gameOver ? 'disabled' : ''} title="Next ${DOUBLE_SCORE_TURNS} score events are doubled">
+      ✨ Double x${doubleCount}${doubleActive}
+    </button>
+  `;
+
+  barEl.querySelectorAll('.booster').forEach(btn => {
+    btn.addEventListener('click', () => useBooster(btn.dataset.booster));
+  });
+}
+
+function useBooster(type) {
+  if (S.gameOver) return;
+  if (!S.boosters[type] || S.boosters[type] <= 0) return;
+
+  if (type === 'hint') {
+    S.boosters.hint -= 1;
+    const hint = findHintMove();
+    if (!hint) {
+      showSolitaireToast('No clear hint available right now.');
+      S.boosters.hint += 1;
+      updateHUD();
+      return;
+    }
+    showHint(hint.sourceEl, hint.targetEl);
+    showSolitaireToast('Hint: try the highlighted move.');
+  }
+
+  if (type === 'double') {
+    S.boosters.double -= 1;
+    S.doubleScoreMoves += DOUBLE_SCORE_TURNS;
+    showSolitaireToast(`Double Score active for next ${DOUBLE_SCORE_TURNS} scoring moves.`);
+  }
+
+  updateHUD();
+}
+
+function getHintCandidates() {
+  const candidates = [];
+
+  for (let col = 0; col < S.tableau.length; col++) {
+    const top = S.tableau[col][S.tableau[col].length - 1];
+    if (!top || top.faceDown || top.locked) continue;
+    candidates.push(top);
+  }
+
+  for (let i = 0; i < S.tanks.length; i++) {
+    const card = S.tanks[i];
+    if (!card || card.faceDown || card.locked) continue;
+    candidates.push(card);
+  }
+
+  return candidates;
+}
+
+function findHintMove() {
+  const candidates = getHintCandidates();
+
+  for (const card of candidates) {
+    const origin = findCardOrigin(card);
+    const sourceEl = document.querySelector(`.card[data-card-id="${card.id}"]`);
+
+    for (let f = 0; f < S.foundations.length; f++) {
+      if (!isValidFoundationMove(card, S.foundations[f], f)) continue;
+      const targetEl = document.querySelector(`.foundation-slot[data-foundation="${f}"]`);
+      if (sourceEl && targetEl) return { sourceEl, targetEl };
+    }
+
+    for (let col = 0; col < S.tableau.length; col++) {
+      if (origin?.type === 'tableau' && origin.col === col) continue;
+      if (!isValidTableauMove(card, S.tableau[col])) continue;
+      const targetEl = document.querySelector(`.tableau-column[data-col="${col}"]`);
+      if (sourceEl && targetEl) return { sourceEl, targetEl };
+    }
+  }
+
+  return null;
+}
+
+function showHint(sourceEl, targetEl) {
+  clearHintHighlights();
+  sourceEl.classList.add('hint-source');
+  targetEl.classList.add('hint-target');
+
+  hintHighlightTimeout = setTimeout(() => {
+    clearHintHighlights();
+  }, 2200);
+}
+
+function clearHintHighlights() {
+  if (hintHighlightTimeout) {
+    clearTimeout(hintHighlightTimeout);
+    hintHighlightTimeout = null;
+  }
+
+  document.querySelectorAll('.hint-source').forEach(el => el.classList.remove('hint-source'));
+  document.querySelectorAll('.hint-target').forEach(el => el.classList.remove('hint-target'));
 }
 
 /* ------------------------------------------------------------
@@ -853,13 +1040,24 @@ function updateProgress(delta) {
   S.progress = Math.max(S.progress, Math.round(foundationBaseline));
   if (S.progress > 100) S.progress = 100;
 
+  awardProgressBoosters();
+
   updateHUD();
   if (S.progress >= 100) triggerWin();
 }
 
 function addScore(baseAmount) {
-  const gained = Math.round(baseAmount * S.multiplier);
+  const hasDouble = S.doubleScoreMoves > 0;
+  const effectiveMultiplier = hasDouble ? S.multiplier * 2 : S.multiplier;
+  const gained = Math.round(baseAmount * effectiveMultiplier);
   S.score += gained;
+
+  if (hasDouble) {
+    S.doubleScoreMoves = Math.max(0, S.doubleScoreMoves - 1);
+    if (S.doubleScoreMoves === 0) {
+      showSolitaireToast('Double Score finished.');
+    }
+  }
 }
 
 function updateHUD() {
@@ -882,6 +1080,7 @@ function updateHUD() {
     else multiplierBadgeEl.classList.remove('active');
   }
 
+  renderBoosterBar();
   updateTimerUI();
   updateBestTimeUI();
 }

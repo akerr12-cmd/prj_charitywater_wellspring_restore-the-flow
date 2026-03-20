@@ -917,24 +917,47 @@ h1 span { color: var(--yellow); }
 }
 
 .booster {
-  width: 42px;
-  height: 42px;
+  min-width: 132px;
+  height: 38px;
+  padding: 0 10px;
   border-radius: 10px;
   background: rgba(255,255,255,0.08);
   border: 2px solid var(--yellow);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.3rem;
+  font-size: 0.78rem;
+  font-weight: 700;
   cursor: pointer;
   transition: transform 0.15s ease, opacity 0.2s ease;
+  color: var(--white);
 }
 .booster:hover {
   transform: translateY(-3px);
 }
+.booster:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
 .booster.used {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+.hint-source .card-inner {
+  box-shadow: 0 0 0 3px rgba(255,201,7,0.95), 0 0 18px rgba(255,201,7,0.65);
+}
+
+.hint-target {
+  outline: 3px solid rgba(79,187,239,0.95);
+  outline-offset: 4px;
+  animation: hintPulse 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes hintPulse {
+  from { filter: brightness(1); }
+  to { filter: brightness(1.25); }
 }
 
 /* =============================================
@@ -1133,8 +1156,9 @@ h1 span { color: var(--yellow); }
    ============================================= */
 
 :root {
-  --play-card-w: 58px;
-  --play-card-h: 110px;
+  --play-card-w: 62px;
+  --play-card-h: 116px;
+  --stack-offset: 18px;
 }
 
 /* Base: phones first */
@@ -1197,7 +1221,7 @@ h1 span { color: var(--yellow); }
 }
 
 .tableau {
-  grid-template-columns: repeat(2, var(--play-card-w));
+  grid-template-columns: repeat(6, var(--play-card-w));
   justify-content: center;
   gap: 10px;
   padding: 12px 10px;
@@ -1205,7 +1229,7 @@ h1 span { color: var(--yellow); }
 
 .tableau-column {
   width: var(--play-card-w);
-  min-height: calc(var(--play-card-h) + 64px);
+  min-height: calc(var(--play-card-h) + 190px);
 }
 
 .foundations {
@@ -1217,8 +1241,9 @@ h1 span { color: var(--yellow); }
 /* Tablet and small laptops */
 @media (min-width: 601px) {
   :root {
-    --play-card-w: 66px;
-    --play-card-h: 124px;
+    --play-card-w: 70px;
+    --play-card-h: 130px;
+    --stack-offset: 20px;
   }
 
   .game-header {
@@ -1233,7 +1258,7 @@ h1 span { color: var(--yellow); }
   }
 
   .tableau {
-    grid-template-columns: repeat(4, var(--play-card-w));
+    grid-template-columns: repeat(6, var(--play-card-w));
     justify-content: center;
     gap: 12px;
     padding: 16px;
@@ -1243,8 +1268,9 @@ h1 span { color: var(--yellow); }
 /* Desktop and large screens */
 @media (min-width: 901px) {
   :root {
-    --play-card-w: 82px;
-    --play-card-h: 154px;
+    --play-card-w: 86px;
+    --play-card-h: 160px;
+    --stack-offset: 26px;
   }
 
   .game-header {
@@ -1253,7 +1279,7 @@ h1 span { color: var(--yellow); }
   }
 
   .tableau {
-    grid-template-columns: repeat(8, var(--play-card-w));
+    grid-template-columns: repeat(6, var(--play-card-w));
     justify-content: center;
     gap: 14px;
     padding: 20px;
@@ -1262,7 +1288,7 @@ h1 span { color: var(--yellow); }
 
   .tableau-column {
     width: var(--play-card-w);
-    min-height: calc(var(--play-card-h) + 64px);
+    min-height: calc(var(--play-card-h) + 190px);
   }
 
   .tanks-row {
@@ -1273,6 +1299,92 @@ h1 span { color: var(--yellow); }
   .foundations {
     gap: 18px;
     padding: 20px;
+  }
+}
+
+/* 768 and below: keep more columns visible and compact card content */
+@media (max-width: 768px) {
+  :root {
+    --play-card-w: 56px;
+    --play-card-h: 110px;
+    --stack-offset: 16px;
+  }
+
+  .tableau {
+    grid-template-columns: repeat(6, var(--play-card-w));
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 8px;
+  }
+
+  .tableau-column {
+    width: var(--play-card-w);
+    min-height: calc(var(--play-card-h) + 170px);
+  }
+
+  .card-face {
+    padding: 5px;
+  }
+
+  .card-emoji {
+    font-size: 1.25rem;
+    margin: 4px 0;
+  }
+
+  .card-name {
+    font-size: 0.56rem;
+    line-height: 1.1;
+    margin-top: 2px;
+    display: -webkit-box;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+  }
+
+  .card-hint {
+    margin-top: 2px;
+    font-size: 0.46rem;
+    line-height: 1.1;
+    border-radius: 5px;
+    padding: 2px 3px;
+    max-height: 2.4em;
+    overflow: hidden;
+  }
+
+  .card-type-badge {
+    font-size: 0.42rem;
+    padding: 2px 4px;
+    letter-spacing: 0.04em;
+  }
+
+  .card-twist-icon {
+    font-size: 0.72rem;
+  }
+
+  .card-id {
+    font-size: 0.45rem;
+    bottom: 4px;
+    right: 5px;
+  }
+}
+
+/* Extra-small phones: preserve 6 columns with smaller cards */
+@media (max-width: 420px) {
+  :root {
+    --play-card-w: 50px;
+    --play-card-h: 100px;
+    --stack-offset: 14px;
+  }
+
+  .tableau {
+    gap: 6px;
+    padding: 8px 6px;
+  }
+
+  .tableau-column {
+    min-height: calc(var(--play-card-h) + 155px);
   }
 }
 
