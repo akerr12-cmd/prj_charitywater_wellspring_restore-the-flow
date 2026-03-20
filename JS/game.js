@@ -97,6 +97,26 @@ function showScreen(name) {
   if (screens[name]) screens[name].classList.add('active');
 }
 
+async function startSelectedMode() {
+  if (typeof window.initSolitaireGame !== 'function') {
+    try {
+      await import('./solitaire.js');
+    } catch (e) {
+      // Keep legacy mode available if solitaire module cannot be loaded.
+      initGame();
+      return;
+    }
+  }
+
+  if (typeof window.initSolitaireGame === 'function') {
+    window.initSolitaireGame();
+    showScreen('game');
+    return;
+  }
+
+  initGame();
+}
+
 // =============================================
 // CARD RENDERING
 // =============================================
@@ -665,7 +685,7 @@ function closeModal(id) {
 
 document.addEventListener('DOMContentLoaded', () => {
   // Title screen
-  $('start-btn')?.addEventListener('click',    initGame);
+  $('start-btn')?.addEventListener('click',    startSelectedMode);
   $('how-to-btn')?.addEventListener('click',   () => openModal('how-to-modal'));
   $('quit-btn')?.addEventListener('click',     () => {
     showToast('Thanks for playing Wellspring Match! 💙', '');
@@ -682,21 +702,21 @@ document.addEventListener('DOMContentLoaded', () => {
   // Game controls
   $('pause-btn')?.addEventListener('click',    pauseGame);
   $('skip-btn')?.addEventListener('click',     onSkip);
-  $('reset-btn')?.addEventListener('click',    initGame);
+  $('reset-btn')?.addEventListener('click',    startSelectedMode);
   $('menu-btn')?.addEventListener('click',     () => { clearInterval(state.timerInterval); showScreen('title'); });
 
   // Pause overlay
   $('resume-btn')?.addEventListener('click',   resumeGame);
-  $('restart-btn')?.addEventListener('click',  () => { resumeGame(); initGame(); });
+  $('restart-btn')?.addEventListener('click',  () => { resumeGame(); startSelectedMode(); });
   $('pause-menu-btn')?.addEventListener('click', () => { resumeGame(); showScreen('title'); });
 
   // Win screen
   $('win-impact-btn')?.addEventListener('click', () => { populateImpactScreen(); showScreen('impact'); });
-  $('win-play-again-btn')?.addEventListener('click', initGame);
+  $('win-play-again-btn')?.addEventListener('click', startSelectedMode);
 
   // Impact screen
   $('impact-menu-btn')?.addEventListener('click',      () => showScreen('title'));
-  $('impact-play-again-btn')?.addEventListener('click', initGame);
+  $('impact-play-again-btn')?.addEventListener('click', startSelectedMode);
 
   // Title: spawn background droplets
   spawnDroplets();

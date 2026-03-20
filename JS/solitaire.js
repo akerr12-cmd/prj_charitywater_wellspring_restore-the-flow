@@ -15,9 +15,6 @@ const NUM_TABLEAU_COLUMNS = 8;
 const NUM_TANKS = 6; // free cells
 const NUM_FOUNDATIONS = 4; // Tools, Solutions, Challenges, Impact
 
-// Placeholder — we will replace with the full 52-card deck
-import { FULL_DECK } from './deck.js';
-
 /* ------------------------------------------------------------
    2. GAME STATE
 ------------------------------------------------------------ */
@@ -475,3 +472,6 @@ function shuffle(arr) {
   }
   return arr;
 }
+
+// Expose initializer for the non-module UI controller in game.js.
+window.initSolitaireGame = initSolitaireGame;

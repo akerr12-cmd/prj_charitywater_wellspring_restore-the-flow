@@ -245,5 +245,3 @@ export const FULL_DECK = [
 
 ];
 
-// deck.js
-export const FULL_DECK = [ ...52 cards... ];
