@@ -14,6 +14,7 @@ import { FULL_DECK } from './deck.js';
 const NUM_TABLEAU_COLUMNS = 8;
 const NUM_TANKS = 6; // free cells
 const NUM_FOUNDATIONS = 4; // Tools, Solutions, Challenges, Impact
+const STACK_OFFSET = 26; // slightly tighter, more elegant
 
 /* ------------------------------------------------------------
    2. GAME STATE
@@ -103,7 +104,8 @@ function renderTableau() {
 
     column.forEach((card, depth) => {
       const cardEl = buildCardEl(card);
-      cardEl.style.top = `${depth * 28}px`; // stacking offset
+      cardEl.style.top = `${depth * STACK_OFFSET}px`;
+      cardEl.style.transition = 'top 0.25s ease';
       cardEl.dataset.col = colIndex;
       cardEl.dataset.index = depth;
 
@@ -255,11 +257,13 @@ function buildCardEl(card) {
 function startDrag(card, el, event) {
   if (card.faceDown || card.locked) return;
 
+  S.dragOrigin = findCardOrigin(card);
   S.isDragging = true;
   S.dragEl = el;
   S.selectedCard = card;
 
   el.classList.add('dragging');
+  highlightDropTargets(card);
 
   document.addEventListener('mousemove', onDragMove);
   document.addEventListener('mouseup', onDragEnd);
@@ -287,6 +291,7 @@ function onDragEnd(event) {
     event.changedTouches ? event.changedTouches[0].clientY : event.clientY
   );
 
+  clearDropTargets();
   attemptMoveToTarget(dropTarget);
 
   // Reset drag state
@@ -294,12 +299,59 @@ function onDragEnd(event) {
   S.dragEl.style = '';
   S.isDragging = false;
   S.dragEl = null;
+  S.dragOrigin = null;
   S.selectedCard = null;
 
   document.removeEventListener('mousemove', onDragMove);
   document.removeEventListener('mouseup', onDragEnd);
   document.removeEventListener('touchmove', onDragMove);
   document.removeEventListener('touchend', onDragEnd);
+}
+
+function findCardOrigin(card) {
+  // Tableau
+  for (let col = 0; col < S.tableau.length; col++) {
+    const idx = S.tableau[col].indexOf(card);
+    if (idx !== -1) return { type: 'tableau', col, index: idx };
+  }
+
+  // Tanks
+  for (let i = 0; i < S.tanks.length; i++) {
+    if (S.tanks[i] === card) return { type: 'tank', tank: i };
+  }
+
+  // Foundations
+  for (let i = 0; i < S.foundations.length; i++) {
+    const idx = S.foundations[i].indexOf(card);
+    if (idx !== -1) return { type: 'foundation', foundation: i, index: idx };
+  }
+
+  return null;
+}
+
+function highlightDropTargets(card) {
+  document.querySelectorAll('.tableau-column').forEach(col => {
+    const colIndex = Number(col.dataset.col);
+    if (isValidTableauMove(card, S.tableau[colIndex])) {
+      col.classList.add('drop-target');
+    }
+  });
+
+  document.querySelectorAll('.tank-slot').forEach((slot, i) => {
+    if (S.tanks[i] === null) slot.classList.add('drop-target');
+  });
+
+  document.querySelectorAll('.foundation-slot').forEach((slot, i) => {
+    if (isValidFoundationMove(card, S.foundations[i], i)) {
+      slot.classList.add('drop-target');
+    }
+  });
+}
+
+function clearDropTargets() {
+  document.querySelectorAll('.drop-target').forEach(el =>
+    el.classList.remove('drop-target')
+  );
 }
 
 /* ------------------------------------------------------------
@@ -513,7 +565,20 @@ function removeCardFromOrigin(card) {
 ------------------------------------------------------------ */
 
 function revealNextCardInOrigin() {
-  // TODO: reveal face-down card if needed
+  // Find the column the card came from
+  const colIndex = S.dragOrigin?.col;
+  if (colIndex == null) return;
+
+  const column = S.tableau[colIndex];
+  if (column.length === 0) return;
+
+  const topCard = column[column.length - 1];
+
+  // Reveal if face-down
+  if (topCard.faceDown) {
+    topCard.faceDown = false;
+    // Optional: add a flip animation delay
+  }
 }
 
 /* ------------------------------------------------------------

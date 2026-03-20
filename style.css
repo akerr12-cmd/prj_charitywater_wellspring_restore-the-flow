@@ -950,10 +950,23 @@ h1 span { color: var(--yellow); }
   z-index: 9999;
 }
 
+.card.dragging .card-inner {
+  box-shadow: 0 8px 20px rgba(0,0,0,0.55);
+  transform: scale(1.06);
+}
+
 /* Drop target highlight */
 .drop-target-column {
   outline: 3px solid var(--yellow);
   outline-offset: 4px;
+}
+
+.tableau-column.drop-target,
+.tank-slot.drop-target,
+.foundation-slot.drop-target {
+  outline: 3px solid var(--yellow);
+  outline-offset: 4px;
+  background: rgba(255,201,7,0.12);
 }
 
 /* =============================================
