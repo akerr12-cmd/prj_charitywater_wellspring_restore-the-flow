@@ -87,9 +87,6 @@ let S = {
   foundations: [],   // array of 4 piles
   selectedCard: null,
   selectedFrom: null, // { type: 'tableau'|'tank'|'foundation', col, index }
-  isDragging: false,
-  dragEl: null,
-  dragOrigin: null,
   gameOver: false,
   score: 0,
   progress: 0,
@@ -124,9 +121,6 @@ export function initSolitaireGame() {
     foundations: Array.from({ length: NUM_FOUNDATIONS }, () => []),
     selectedCard: null,
     selectedFrom: null,
-    isDragging: false,
-    dragEl: null,
-    dragOrigin: null,
     gameOver: false,
     score: 0,
     progress: 0,
@@ -153,7 +147,6 @@ function bindResponsiveLayoutListeners() {
   const onViewportChange = () => {
     if (resizeRenderTimeout) clearTimeout(resizeRenderTimeout);
     resizeRenderTimeout = setTimeout(() => {
-      if (S.isDragging) return;
       renderBoard();
       updateHUD();
     }, 120);
@@ -544,18 +537,6 @@ function handleDropTargetClick(target) {
   }
 }
 
-function startDrag(card, el, event) {
-  // Deprecated: drag system replaced with click-to-select
-}
-
-function onDragMove(event) {
-  // Deprecated: drag system replaced with click-to-select
-}
-
-function onDragEnd(event) {
-  // Deprecated: drag system replaced with click-to-select
-}
-
 /* ------------------------------------------------------------
    8. MOVE VALIDATION
 ------------------------------------------------------------ */
@@ -568,6 +549,8 @@ function moveToTank(tankIndex) {
   if (S.tanks[tankIndex] !== null) return; // tank full
 
   removeCardFromOrigin(S.selectedCard);
+  S.selectedCard.faceDown = false;
+  S.selectedCard.justRevealed = true;
   S.tanks[tankIndex] = S.selectedCard;
 
   revealNextCardInOrigin();
@@ -580,6 +563,8 @@ function moveToFoundation(fIndex) {
   if (!isValidFoundationMove(S.selectedCard, pile, fIndex)) return;
 
   removeCardFromOrigin(S.selectedCard);
+  S.selectedCard.faceDown = false;
+  S.selectedCard.justRevealed = true;
   pile.push(S.selectedCard);
 
   revealNextCardInOrigin();
@@ -595,6 +580,8 @@ function moveToTableau(colIndex) {
   if (!isValidTableauMove(S.selectedCard, column)) return;
 
   removeCardFromOrigin(S.selectedCard);
+  S.selectedCard.faceDown = false;
+  S.selectedCard.justRevealed = true;
   column.push(S.selectedCard);
 
   const topAfter = S.selectedCard;
@@ -603,6 +590,19 @@ function moveToTableau(colIndex) {
   revealNextCardInOrigin();
   updateHUD();
   renderBoard();
+  
+  // Trigger animation on the moved card
+  setTimeout(() => {
+    const el = document.querySelector(`[data-card-id="${S.selectedCard.id}"]`);
+    if (el) {
+      el.style.animation = 'none';
+      setTimeout(() => {
+        el.style.animation = '';
+        el.classList.add('card-moved');
+        setTimeout(() => el.classList.remove('card-moved'), 300);
+      }, 10);
+    }
+  }, 50);
 }
 
 function handlePostMoveEffects(prevTop, newTop, column, colIndex) {
@@ -976,14 +976,23 @@ function isValidTableauMove(card, column) {
   // If you don't want this, remove this block.
   if (topType === 'tool' && type === 'challenge') return true;
 
+  // Challenge → Challenge
+  if (topType === 'challenge' && type === 'challenge') return true;
+
   // Challenge → Solution (clear challenge)
   if (topType === 'challenge' && type === 'solution') return true;
+  
+  // Solution → Solution (chain solutions)
+  if (topType === 'solution' && type === 'solution') return true;
 
   // Solution → Impact (scoring combo)
   if (topType === 'solution' && type === 'impact') return true;
 
   // Impact → Impact (stack multipliers)
   if (topType === 'impact' && type === 'impact') return true;
+  
+  // Impact → Solution (unwind)
+  if (topType === 'impact' && type === 'solution') return true;
 
   // Everything else is invalid
   return false;
@@ -1027,8 +1036,11 @@ function removeCardFromOrigin(card) {
 ------------------------------------------------------------ */
 
 function revealNextCardInOrigin() {
-  // Find the column the card came from
-  const colIndex = S.dragOrigin?.col;
+  // Find the column the card came from (click-to-place origin).
+  const origin = S.selectedFrom;
+  if (!origin || origin.type !== 'tableau') return;
+
+  const colIndex = origin.col;
   if (colIndex == null) return;
 
   const column = S.tableau[colIndex];
