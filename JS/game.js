@@ -746,7 +746,24 @@ document.addEventListener('DOMContentLoaded', () => {
   $('start-btn')?.addEventListener('click',    startSelectedMode);
   $('how-to-btn')?.addEventListener('click',   () => openModal('how-to-modal'));
   $('quit-btn')?.addEventListener('click',     () => {
-    showToast('Thanks for playing Wellspring Match! 💙', '');
+    // Browsers only allow script-closing windows in limited cases (e.g., script-opened tabs).
+    // Try the standard close path first, then a compatible fallback.
+    window.close();
+
+    setTimeout(() => {
+      if (!document.hidden) {
+        try {
+          window.open('', '_self');
+          window.close();
+        } catch (_) {
+          // Ignore fallback errors.
+        }
+      }
+
+      if (!document.hidden) {
+        showToast('Your browser blocked auto-close. You can close this tab/window now.', '');
+      }
+    }, 80);
   });
 
   // Modal close
