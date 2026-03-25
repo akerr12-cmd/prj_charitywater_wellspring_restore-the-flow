@@ -433,13 +433,21 @@
         // ===========================================================
         
         function initOrientationLock() {
-            const isMobile = window.innerWidth <= 900;
             const portraitWarning = document.getElementById('portrait-warning');
+            const gameScreen = document.getElementById('game-screen');
+            const TABLET_BREAKPOINT = 1024;
+
+            function isTabletOrMobileViewport() {
+                // Use the smaller side so portrait tablets are still treated as small-screen devices.
+                return Math.min(window.innerWidth, window.innerHeight) <= TABLET_BREAKPOINT;
+            }
             
             function handleOrientationChange() {
+                const isTabletOrMobile = isTabletOrMobileViewport();
                 const isPortrait = window.innerHeight > window.innerWidth;
+                const isGameplayActive = gameScreen && gameScreen.classList.contains('active');
                 
-                if (isMobile && isPortrait) {
+                if (isGameplayActive && isTabletOrMobile && isPortrait) {
                     portraitWarning.setAttribute('aria-hidden', 'false');
                     portraitWarning.classList.add('show');
                 } else {
@@ -458,6 +466,12 @@
             // Listen for orientation changes
             window.addEventListener('orientationchange', handleOrientationChange);
             window.addEventListener('resize', handleOrientationChange);
+
+            // Re-check when screen visibility changes (title/game/win/impact).
+            const screenObserver = new MutationObserver(handleOrientationChange);
+            document.querySelectorAll('.screen').forEach((screen) => {
+                screenObserver.observe(screen, { attributes: true, attributeFilter: ['class'] });
+            });
             
             // Initial check
             handleOrientationChange();

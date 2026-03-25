@@ -1700,3 +1700,120 @@ h1 span { color: var(--yellow); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* =============================================
+   RESPONSIVE LAYOUT STABILIZER (GAMEPLAY)
+   ============================================= */
+
+#game-screen {
+  overflow-x: hidden;
+  --board-side-pad: clamp(8px, 1.8vw, 20px);
+  --tableau-gap: clamp(6px, 1vw, 14px);
+  --play-card-w: clamp(52px, calc((100vw - (var(--board-side-pad) * 2) - (var(--tableau-gap) * 7)) / 8), 103px);
+  --play-card-h: calc(var(--play-card-w) * 1.67);
+  --stack-offset: clamp(14px, calc(var(--play-card-h) * 0.15), 26px);
+}
+
+#game-screen .game-header {
+  justify-content: space-between;
+}
+
+#game-screen .header-left,
+#game-screen .header-right {
+  flex-wrap: wrap;
+}
+
+#game-screen .board-layout {
+  width: min(100%, 1380px);
+  margin: 0 auto;
+  padding-inline: var(--board-side-pad);
+}
+
+#game-screen .tableau {
+  width: 100%;
+  grid-template-columns: repeat(8, var(--play-card-w));
+  justify-content: center;
+  gap: var(--tableau-gap);
+  padding: clamp(8px, 1.6vw, 20px) 0;
+  margin: 0 auto;
+}
+
+#game-screen .tableau-column {
+  width: var(--play-card-w);
+  min-width: 0;
+}
+
+#game-screen .tableau-column .card {
+  width: var(--play-card-w) !important;
+  height: var(--play-card-h) !important;
+}
+
+#game-screen .tanks-row,
+#game-screen .foundations {
+  flex-wrap: wrap;
+}
+
+/* Keep tanks above tableau for most desktop widths to avoid cramped board states. */
+@media (max-width: 1319px) {
+  #game-screen .board-layout {
+    display: block;
+    max-width: 1200px;
+  }
+
+  #game-screen .board-layout .tanks-row {
+    display: flex;
+    justify-content: center;
+    padding: 10px 0 6px;
+  }
+
+  #game-screen .board-layout .tableau {
+    max-width: none;
+  }
+}
+
+/* Only use side-by-side tanks/tableau on truly wide screens. */
+@media (min-width: 1320px) {
+  #game-screen .board-layout {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: start;
+    column-gap: 18px;
+    max-width: 1380px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  #game-screen .board-layout .tanks-row {
+    display: grid;
+    grid-template-columns: repeat(2, calc(var(--play-card-w) + 8px));
+    gap: 12px;
+    padding: 20px 0 0;
+    justify-content: start;
+    align-content: start;
+  }
+
+  #game-screen .board-layout .tableau {
+    margin: 0;
+  }
+}
+
+/* Compact header chips and controls before they collide. */
+@media (max-width: 980px) {
+  #game-screen .game-header {
+    justify-content: center;
+    row-gap: 8px;
+    column-gap: 10px;
+  }
+
+  #game-screen .header-left,
+  #game-screen .header-right {
+    width: 100%;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  #game-screen .stat-chip {
+    padding: 5px 8px;
+  }
+}
+
