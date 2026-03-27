@@ -231,25 +231,37 @@ function renderTableauColumn(colIndex) {
   const column = S.tableau[colIndex];
   if (!container) return;
 
-  const stackOffset = getConfiguredStackOffset();
+  const baseStackOffset = getConfiguredStackOffset();
 
   container.innerHTML = '';
 
+  const cardHeight = getConfiguredCardHeight();
+  const stackDepth = Math.max(0, column.length - 1);
+  const hostHeight = container.clientHeight;
+  const hostCanConstrain = hostHeight > cardHeight + 24;
+
+  // In constrained viewports, tighten stack spacing so full columns stay visible.
+  const dynamicOffset = stackDepth > 0 && hostCanConstrain
+    ? Math.max(8, Math.min(baseStackOffset, Math.floor((hostHeight - cardHeight - 12) / stackDepth)))
+    : baseStackOffset;
+  const isMobileLayoutMode = window.innerHeight < 400 || window.innerWidth < 400;
+
   column.forEach((card, depth) => {
     const cardEl = buildCardEl(card);
-    cardEl.style.top = `${depth * stackOffset}px`;
+    cardEl.style.top = isMobileLayoutMode ? '0px' : `${depth * dynamicOffset}px`;
     cardEl.style.transition = 'top 0.25s ease';
     cardEl.dataset.col = colIndex;
     cardEl.dataset.index = depth;
     container.appendChild(cardEl);
   });
 
-  // Ensure each grid cell reserves enough vertical space for the full stack.
-  const cardHeight = getConfiguredCardHeight();
-  const stackDepth = Math.max(0, column.length - 1);
-  const requiredHeight = cardHeight + stackDepth * stackOffset + 20;
-  const minMobileHeight = cardHeight + 190;
-  container.style.minHeight = `${Math.max(minMobileHeight, requiredHeight)}px`;
+  // Fallback sizing for layouts where the column host does not have explicit height.
+  const requiredHeight = cardHeight + stackDepth * dynamicOffset + 20;
+  const shortViewport = window.innerHeight > 0 && window.innerHeight <= 780;
+  const minMobileHeight = cardHeight + (shortViewport ? 90 : 140);
+  container.style.minHeight = hostCanConstrain
+    ? '0px'
+    : `${Math.max(minMobileHeight, requiredHeight)}px`;
 }
 
 function getConfiguredCardHeight() {

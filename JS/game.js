@@ -707,6 +707,25 @@ function closeModal(id) {
 // =============================================
 
 document.addEventListener('DOMContentLoaded', () => {
+  function syncGameplayViewportVars() {
+    const viewportWidth = Math.round(window.visualViewport?.width || window.innerWidth || 0);
+    const viewportHeight = Math.round(window.visualViewport?.height || window.innerHeight || 0);
+
+    if (viewportWidth > 0) {
+      document.documentElement.style.setProperty('--app-vw', `${viewportWidth}px`);
+    }
+    if (viewportHeight > 0) {
+      document.documentElement.style.setProperty('--app-vh', `${viewportHeight}px`);
+    }
+  }
+
+  syncGameplayViewportVars();
+  window.addEventListener('resize', syncGameplayViewportVars, { passive: true });
+  window.addEventListener('orientationchange', syncGameplayViewportVars, { passive: true });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', syncGameplayViewportVars, { passive: true });
+  }
+
   // Wire all top-level UI controls once DOM is ready.
   // Preload solitaire module so first Start click is immediate.
   import('./solitaire.js').catch(() => {

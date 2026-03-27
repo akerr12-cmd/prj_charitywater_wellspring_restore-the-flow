@@ -1709,8 +1709,8 @@ h1 span { color: var(--yellow); }
   overflow-x: hidden;
   --board-side-pad: clamp(8px, 1.8vw, 20px);
   --tableau-gap: clamp(6px, 1vw, 14px);
-  --play-card-w: clamp(52px, calc((100vw - (var(--board-side-pad) * 2) - (var(--tableau-gap) * 7)) / 8), 103px);
-  --play-card-h: calc(var(--play-card-w) * 1.67);
+  --play-card-w: clamp(36px, calc((100vw - (var(--board-side-pad) * 2) - (var(--tableau-gap) * 7)) / 8), 103px);
+  --play-card-h: clamp(72px, calc(var(--play-card-w) * 1.67), 172px);
   --stack-offset: clamp(14px, calc(var(--play-card-h) * 0.15), 26px);
 }
 
@@ -1814,6 +1814,158 @@ h1 span { color: var(--yellow); }
 
   #game-screen .stat-chip {
     padding: 5px 8px;
+  }
+}
+
+@media (max-height: 400px), (max-width: 400px) {
+  :root {
+    --play-card-h: 90px;
+    --stack-offset: 0px;
+  }
+
+  #game-screen .tableau {
+    grid-template-columns: repeat(8, 1fr);
+    gap: 6px;
+    padding: 6px;
+  }
+
+  #game-screen .tableau-column {
+    min-height: auto;
+    padding-bottom: 0;
+  }
+
+  #game-screen .tableau-column .card {
+    position: relative;
+    top: 0 !important;
+    margin-bottom: 4px;
+  }
+
+  #game-screen .card {
+    aspect-ratio: 2/3;
+    min-height: 90px;
+  }
+
+  #game-screen .tanks-row {
+    gap: 6px;
+    padding: 6px;
+  }
+
+  #game-screen .tank-slot {
+    width: 60px;
+    height: 80px;
+  }
+
+  #game-screen .foundations {
+    gap: 8px;
+    padding: 6px;
+  }
+
+  #game-screen .foundation-slot {
+    width: 55px;
+    height: 70px;
+  }
+
+  #game-screen .card-emoji {
+    font-size: 1.4rem;
+  }
+
+  #game-screen .card-name {
+    font-size: 0.55rem;
+  }
+
+  #game-screen .card-hint {
+    font-size: 0.45rem;
+    padding: 2px 3px;
+  }
+
+  #game-screen .card-point-value {
+    font-size: 0.55rem;
+  }
+}
+
+/* Gameplay viewport fit: lock game screen to viewport height and prevent page scrolling. */
+#game-screen.screen.active {
+  height: var(--app-vh, 100dvh);
+  min-height: var(--app-vh, 100dvh);
+  max-height: var(--app-vh, 100dvh);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+}
+
+#game-screen .board-layout {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#game-screen .board-layout .tanks-row {
+  flex: 0 0 auto;
+}
+
+#game-screen .tableau {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  align-content: stretch;
+  grid-auto-rows: minmax(0, 1fr);
+}
+
+#game-screen .tableau-column {
+  height: 100%;
+  min-height: 0;
+  padding-bottom: 8px;
+}
+
+#game-screen .foundations {
+  overflow: hidden;
+}
+
+/* Short-height viewports: compress vertical spacing to avoid page scroll. */
+@media (max-height: 780px) {
+  #game-screen {
+    --board-side-pad: clamp(6px, 1vw, 10px);
+    --tableau-gap: clamp(4px, 0.8vw, 8px);
+    --play-card-h: clamp(92px, 15vh, 124px);
+    --stack-offset: clamp(12px, calc(var(--play-card-h) * 0.14), 18px);
+  }
+
+  #game-screen .game-header {
+    padding: 8px 10px;
+    row-gap: 6px;
+  }
+
+  #game-screen .progress-section {
+    padding: 8px 10px;
+  }
+
+  #game-screen .booster-bar {
+    padding: 8px 10px;
+  }
+
+  #game-screen .tanks-row {
+    padding: 6px 0 4px;
+    gap: 8px;
+  }
+
+  #game-screen .tableau {
+    padding: 6px 0;
+  }
+
+  #game-screen .tableau-column {
+    padding-bottom: 26px;
+  }
+
+  #game-screen .foundations {
+    padding: 8px 10px 12px;
+    gap: 10px;
+  }
+
+  #game-screen .foundation-slot::after {
+    top: calc(100% + 4px);
+    font-size: 0.58rem;
   }
 }
 
