@@ -537,11 +537,13 @@ function populateImpactScreen() {
   if (typeof window.getSolitaireRunStats === 'function') {
     const stats = window.getSolitaireRunStats();
     if (stats) {
+      updateSimFromRun(stats);
       setText('impact-score',      Number(stats.score || 0).toLocaleString());
       setText('impact-challenges', stats.challenges ?? 0);
       setText('impact-people',     stats.people ?? 0);
       setText('impact-time',       stats.timeLabel || '0:00');
       setText('impact-progress',   `${Math.round(stats.progress || 0)}%`);
+      renderSimPanels();
       return;
     }
   }
@@ -555,6 +557,17 @@ function populateImpactScreen() {
   setText('impact-people',     state.peopleHelped);
   setText('impact-time',       `${mins}:${secs.toString().padStart(2, '0')}`);
   setText('impact-progress',   `${Math.round(state.wellProgress)}%`);
+
+  updateSimFromRun({
+    score: state.score,
+    challenges: state.challengesOvercome,
+    people: state.peopleHelped,
+    progress: Math.round(state.wellProgress),
+    difficulty: 'normal',
+    timeLabel: `${mins}:${secs.toString().padStart(2, '0')}`,
+    outcome: 'legacy',
+  });
+  renderSimPanels();
 }
 
 function setText(id, val) {
@@ -563,6 +576,281 @@ function setText(id, val) {
 }
 
 window.populateImpactScreen = populateImpactScreen;
+
+// =============================================
+// LOCAL SIMULATION LAYER (localStorage only)
+// =============================================
+
+const SIM_KEYS = {
+  profile: 'cw.sim.profile',
+  scoreboard: 'cw.sim.scoreboard',
+  community: 'cw.sim.community',
+};
+
+const ACHIEVEMENTS = [
+  { id: 'first_run', name: 'First Restoration', desc: 'Complete your first run.', test: p => p.totalRuns >= 1 },
+  { id: 'best_1500', name: 'High Scorer', desc: 'Reach a best score of 1,500.', test: p => p.bestScore >= 1500 },
+  { id: 'people_300', name: 'Community Lifeline', desc: 'Help 300 total people.', test: p => p.totalPeople >= 300 },
+  { id: 'challenges_20', name: 'Challenge Breaker', desc: 'Overcome 20 challenges total.', test: p => p.totalChallenges >= 20 },
+  { id: 'runs_5', name: 'Field Veteran', desc: 'Complete 5 runs.', test: p => p.totalRuns >= 5 },
+  { id: 'restore_100', name: 'Full Restoration', desc: 'Finish a 100% run once.', test: p => p.bestProgress >= 100 },
+];
+
+const BOT_NAMES = [
+  'AquaNova', 'WellRunner', 'H2OHope', 'FlowMaker', 'VillageLift',
+];
+
+let lastRecordedRunKey = null;
+
+function readJson(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return parsed ?? fallback;
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function writeJson(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (_) {
+    // Ignore quota/storage restrictions.
+  }
+}
+
+function pickHandle() {
+  const left = ['Blue', 'Clear', 'River', 'Solar', 'Well', 'Bright'];
+  const right = ['Builder', 'Guardian', 'Runner', 'Scout', 'Keeper', 'Spark'];
+  const a = left[Math.floor(Math.random() * left.length)];
+  const b = right[Math.floor(Math.random() * right.length)];
+  return `${a}${b}${Math.floor(10 + Math.random() * 90)}`;
+}
+
+function defaultProfile() {
+  return {
+    id: `local-${Math.floor(Date.now() / 1000)}`,
+    handle: pickHandle(),
+    level: 1,
+    title: 'Rookie Restorer',
+    totalRuns: 0,
+    bestScore: 0,
+    totalPeople: 0,
+    totalChallenges: 0,
+    bestProgress: 0,
+    achievements: {},
+  };
+}
+
+function seedScoreboard(handle) {
+  const now = Date.now();
+  const bots = BOT_NAMES.map((name, idx) => ({
+    name,
+    score: 900 + ((idx + 2) * 140),
+    people: 80 + (idx * 12),
+    difficulty: idx % 2 === 0 ? 'normal' : 'hard',
+    at: now - ((idx + 1) * 3600000),
+    source: 'sim',
+  }));
+
+  bots.push({
+    name: handle,
+    score: 0,
+    people: 0,
+    difficulty: 'normal',
+    at: now,
+    source: 'local',
+  });
+
+  return bots;
+}
+
+function seedCommunity(handle) {
+  return [
+    { text: `${handle} joined the local community board.`, at: Date.now() },
+    { text: 'AquaNova completed a clean-water sprint on hard mode.', at: Date.now() - 120000 },
+    { text: 'FlowMaker unlocked Field Veteran.', at: Date.now() - 290000 },
+  ];
+}
+
+function ensureSimData() {
+  let profile = readJson(SIM_KEYS.profile, null);
+  if (!profile) {
+    profile = defaultProfile();
+    writeJson(SIM_KEYS.profile, profile);
+  }
+
+  let board = readJson(SIM_KEYS.scoreboard, null);
+  if (!Array.isArray(board) || board.length === 0) {
+    board = seedScoreboard(profile.handle);
+    writeJson(SIM_KEYS.scoreboard, board);
+  }
+
+  let community = readJson(SIM_KEYS.community, null);
+  if (!Array.isArray(community) || community.length === 0) {
+    community = seedCommunity(profile.handle);
+    writeJson(SIM_KEYS.community, community);
+  }
+
+  return { profile, board, community };
+}
+
+function getPlayerTitle(profile) {
+  if (profile.totalRuns >= 10) return 'Master Restorer';
+  if (profile.totalRuns >= 5) return 'Field Veteran';
+  if (profile.totalRuns >= 2) return 'Flow Specialist';
+  return 'Rookie Restorer';
+}
+
+function runKeyFromStats(stats) {
+  return [
+    Number(stats.score || 0),
+    Number(stats.people || 0),
+    Number(stats.challenges || 0),
+    String(stats.timeLabel || '0:00'),
+    Number(stats.progress || 0),
+    String(stats.outcome || 'in-progress'),
+  ].join('|');
+}
+
+function updateSimFromRun(stats) {
+  const score = Number(stats.score || 0);
+  if (score <= 0) return;
+
+  const runKey = runKeyFromStats(stats);
+  if (runKey === lastRecordedRunKey) return;
+  lastRecordedRunKey = runKey;
+
+  const { profile, board, community } = ensureSimData();
+  profile.totalRuns += 1;
+  profile.bestScore = Math.max(profile.bestScore, score);
+  profile.totalPeople += Number(stats.people || 0);
+  profile.totalChallenges += Number(stats.challenges || 0);
+  profile.bestProgress = Math.max(profile.bestProgress, Number(stats.progress || 0));
+  profile.level = Math.min(99, 1 + Math.floor(profile.totalRuns / 2));
+  profile.title = getPlayerTitle(profile);
+
+  const unlockedNow = [];
+  ACHIEVEMENTS.forEach(a => {
+    if (!profile.achievements[a.id] && a.test(profile)) {
+      profile.achievements[a.id] = Date.now();
+      unlockedNow.push(a.name);
+    }
+  });
+
+  board.push({
+    name: profile.handle,
+    score,
+    people: Number(stats.people || 0),
+    difficulty: String(stats.difficulty || 'normal'),
+    at: Date.now(),
+    source: 'local',
+  });
+
+  const trimmedBoard = board
+    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
+    .slice(0, 8);
+
+  const feed = [{
+    text: `${profile.handle} posted ${score.toLocaleString()} on ${String(stats.difficulty || 'normal')} mode.`,
+    at: Date.now(),
+  }, ...community];
+
+  if (unlockedNow.length > 0) {
+    feed.unshift({
+      text: `${profile.handle} unlocked ${unlockedNow.join(', ')}.`,
+      at: Date.now(),
+    });
+  }
+
+  writeJson(SIM_KEYS.profile, profile);
+  writeJson(SIM_KEYS.scoreboard, trimmedBoard);
+  writeJson(SIM_KEYS.community, feed.slice(0, 9));
+}
+
+function renderSimAccount() {
+  const { profile } = ensureSimData();
+  setText('sim-account-level', `Lv. ${profile.level}`);
+  setText('sim-account-handle', profile.handle);
+  setText('sim-account-title', profile.title || getPlayerTitle(profile));
+}
+
+function renderScoreboard(board, profileHandle) {
+  const root = $('sim-scoreboard');
+  if (!root) return;
+
+  root.innerHTML = '';
+  const sorted = [...board].sort((a, b) => Number(b.score || 0) - Number(a.score || 0)).slice(0, 6);
+
+  sorted.forEach((entry, idx) => {
+    const row = document.createElement('div');
+    row.className = 'sim-list-item';
+    const isPlayer = entry.name === profileHandle;
+    row.innerHTML = `
+      <div>
+        <strong>${idx + 1}. ${entry.name}${isPlayer ? ' (You)' : ''}</strong>
+        <div class="meta">${String(entry.difficulty || 'normal')} mode · ${Number(entry.people || 0)} helped</div>
+      </div>
+      <strong>${Number(entry.score || 0).toLocaleString()}</strong>
+    `;
+    root.appendChild(row);
+  });
+}
+
+function renderAchievements(profile) {
+  const root = $('sim-achievements');
+  if (!root) return;
+
+  root.innerHTML = '';
+  let unlockedCount = 0;
+
+  ACHIEVEMENTS.forEach(a => {
+    const unlocked = Boolean(profile.achievements?.[a.id]);
+    if (unlocked) unlockedCount += 1;
+
+    const chip = document.createElement('div');
+    chip.className = `achievement-chip${unlocked ? '' : ' locked'}`;
+    chip.innerHTML = `
+      <span class="name">${unlocked ? '✔' : '○'} ${a.name}</span>
+      <span class="desc">${a.desc}</span>
+    `;
+    root.appendChild(chip);
+  });
+
+  setText('sim-achievement-count', `${unlockedCount}/${ACHIEVEMENTS.length} unlocked`);
+}
+
+function renderCommunity(feed) {
+  const root = $('sim-community-feed');
+  if (!root) return;
+
+  root.innerHTML = '';
+  feed.slice(0, 5).forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'sim-list-item';
+
+    const when = new Date(item.at || Date.now());
+    const hh = String(when.getHours()).padStart(2, '0');
+    const mm = String(when.getMinutes()).padStart(2, '0');
+    row.innerHTML = `
+      <div>
+        <strong>${item.text}</strong>
+        <div class="meta">${hh}:${mm}</div>
+      </div>
+    `;
+    root.appendChild(row);
+  });
+}
+
+function renderSimPanels() {
+  const { profile, board, community } = ensureSimData();
+  renderSimAccount();
+  renderScoreboard(board, profile.handle);
+  renderAchievements(profile);
+  renderCommunity(community);
+}
 
 // =============================================
 // UI UPDATES
@@ -1032,6 +1320,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Pause overlay
   $('resume-btn')?.addEventListener('click',   resumeGame);
+  $('pause-howto-btn')?.addEventListener('click', () => openModal('pause-howto-modal'));
   $('restart-btn')?.addEventListener('click',  () => { resumeGame(); startSelectedMode(); });
   $('pause-menu-btn')?.addEventListener('click', () => { resumeGame(); showScreen('title'); });
 
@@ -1050,6 +1339,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Title: spawn background droplets
   spawnDroplets();
+
+  // Initialize local-only social simulation surfaces.
+  ensureSimData();
+  renderSimPanels();
 
   // Temporary QA controls for quick screen checks.
   bindTempScreenHud();

@@ -261,6 +261,59 @@ h1 span { color: var(--yellow); }
   gap: 8px;
 }
 
+.sim-account-card {
+  width: 100%;
+  margin: 2px auto 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.2);
+  text-align: left;
+}
+
+.sim-account-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.sim-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(10, 45, 62, 0.72);
+  color: var(--light-blue);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.sim-account-level {
+  color: var(--yellow);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.sim-account-handle {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--white);
+  line-height: 1.2;
+}
+
+.sim-account-title {
+  margin-top: 2px;
+  color: rgba(255,255,255,0.78);
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+}
+
 .btn {
   min-height: 42px;
   padding: 11px 18px;
@@ -268,16 +321,15 @@ h1 span { color: var(--yellow); }
 
 /* Footer Link */
 .screen-footer {
-  position: absolute;
-  bottom: max(12px, var(--safe-bottom));
-  left: 0;
-  right: 0;
+  position: static;
   text-align: center;
   z-index: 20;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  margin-top: 8px;
+  padding-bottom: max(10px, var(--safe-bottom));
 }
 
 .charity-footer-bar {

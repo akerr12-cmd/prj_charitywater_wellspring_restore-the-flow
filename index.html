@@ -49,6 +49,15 @@
                 Clear obstacles. Repair the system.<br>Fix what’s broken. Restore what matters.
             </p>
 
+            <section class="sim-account-card" aria-label="Local player account">
+                <div class="sim-account-head">
+                    <span class="sim-pill">Local Account</span>
+                    <span id="sim-account-level" class="sim-account-level">Lv. 1</span>
+                </div>
+                <div id="sim-account-handle" class="sim-account-handle">FieldPlayer</div>
+                <div id="sim-account-title" class="sim-account-title">Rookie Restorer</div>
+            </section>
+
             <nav class="title-buttons" aria-label="Main menu">
                 <button id="start-btn" class="btn btn-primary">
                     💧 Start Game
@@ -409,6 +418,30 @@
                 reality." — <em>charity: water</em>
             </blockquote>
 
+            <section class="sim-section" aria-label="Local scoreboards">
+                <div class="sim-section-head">
+                    <h3>Scoreboards</h3>
+                    <span class="sim-pill">localStorage</span>
+                </div>
+                <div id="sim-scoreboard" class="sim-list"></div>
+            </section>
+
+            <section class="sim-section" aria-label="Achievements and unlocks">
+                <div class="sim-section-head">
+                    <h3>Achievements / Unlocks</h3>
+                    <span id="sim-achievement-count" class="sim-pill">0 unlocked</span>
+                </div>
+                <div id="sim-achievements" class="achievement-grid"></div>
+            </section>
+
+            <section class="sim-section" aria-label="Community play">
+                <div class="sim-section-head">
+                    <h3>Community Play</h3>
+                    <span class="sim-pill">simulated</span>
+                </div>
+                <div id="sim-community-feed" class="sim-list"></div>
+            </section>
+
             <div class="impact-buttons">
                 <button id="impact-play-again-btn" class="btn btn-primary">↺ Play Again</button>
                 <button id="impact-menu-btn" class="btn btn-secondary">⬅ Main Menu</button>
@@ -454,8 +487,42 @@
         <h2 id="pause-title">Paused</h2>
         <div class="pause-buttons">
             <button id="resume-btn" class="btn btn-primary" type="button">▶ Resume</button>
+            <button id="pause-howto-btn" class="btn btn-secondary" type="button">📖 How to Play</button>
             <button id="restart-btn" class="btn btn-secondary" type="button">↺ Restart</button>
             <button id="pause-menu-btn" class="btn btn-secondary" type="button">⬅ Main Menu</button>
+        </div>
+    </div>
+
+    <div id="pause-howto-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="pause-howto-title">
+        <div class="modal">
+            <button class="modal-close" data-close-modal="pause-howto-modal" aria-label="Close quick how to play">✕</button>
+            <h2 id="pause-howto-title">Quick How to Play</h2>
+
+            <div class="how-to-section">
+                <h3>Goal</h3>
+                <p>Reach 100% restoration progress by completing pipeline runs before time runs out.</p>
+            </div>
+
+            <div class="how-to-section">
+                <h3>Run Order</h3>
+                <ul>
+                    <li><strong>Tool</strong> → place any Tool card.</li>
+                    <li><strong>Challenge</strong> → appears automatically.</li>
+                    <li><strong>Solution</strong> → must match that Challenge.</li>
+                    <li><strong>Impact</strong> → playable after a valid Solution.</li>
+                </ul>
+            </div>
+
+            <div class="how-to-section">
+                <h3>Extras</h3>
+                <ul>
+                    <li><strong>Consumables</strong> trigger one-time effects.</li>
+                    <li><strong>Boosters</strong> provide limited tactical advantages.</li>
+                    <li><strong>Reroute</strong> refreshes your hand if you get stuck.</li>
+                </ul>
+            </div>
+
+            <button class="btn btn-primary" style="width:100%;margin-top:8px;" data-close-modal="pause-howto-modal">Back to Pause</button>
         </div>
     </div>
 
