@@ -792,7 +792,7 @@ function buildCardDetailText(card) {
     return 'Mission card used to restore clean water access.';
   }
 
-  return text.length > 88 ? `${text.slice(0, 85)}...` : text;
+  return text;
 }
 
 function updateHud() {

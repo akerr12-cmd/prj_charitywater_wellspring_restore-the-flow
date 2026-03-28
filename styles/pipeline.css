@@ -359,13 +359,17 @@
   font-size: clamp(0.68rem, 0.95vw, 0.82rem);
   line-height: 1.26;
   color: rgba(255, 255, 255, 0.92);
-  display: -webkit-box;
-  line-clamp: 2;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  display: block;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  scrollbar-width: thin;
+  flex: 1 1 auto;
+  min-height: 0;
   margin-top: 1px;
   width: 100%;
+  padding-right: 2px;
 }
 
 .pipeline-card .card-type {
@@ -618,7 +622,38 @@
   background: rgba(79, 187, 239, 0.25);
 }
 
-@media (min-width: 900px) {
+@media (min-width: 900px) and (max-width: 1099px) {
+  #game-screen {
+    --slot-size: min(17.2vw, 136px);
+    --card-w: min(15.2vw, 118px);
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .pipeline-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .pipeline-controls {
+    justify-content: flex-start;
+    gap: 7px;
+  }
+
+  .pipeline-controls .btn {
+    min-height: 34px;
+    padding: 7px 10px;
+    font-size: 0.74rem;
+  }
+
+  .pipeline-stats {
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
   #game-screen {
     --slot-size: min(16vw, 160px);
     --card-w: min(13.8vw, 132px);
@@ -777,8 +812,6 @@
 
   .pipeline-card .card-description {
     font-size: 0.67rem;
-    line-clamp: 2;
-    -webkit-line-clamp: 2;
   }
 
   #game-screen .charity-footer-bar {
@@ -983,8 +1016,6 @@
 
   .pipeline-card .card-description {
     font-size: 0.56rem;
-    line-clamp: 2;
-    -webkit-line-clamp: 2;
   }
 
   .pipeline-card .card-type {
