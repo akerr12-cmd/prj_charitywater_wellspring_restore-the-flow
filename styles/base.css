@@ -2,6 +2,19 @@
   BASE LAYER (MOBILE FIRST)
   ============================================= */
 
+/*
+  Owns:
+  - Shared spacing tokens and base typography scale
+  - Orientation warning overlay visuals
+  - Title screen atmosphere and hero structure
+  - Shared footer link treatment used by end screens
+
+  Breakpoint strategy:
+  - Base = phone-first defaults
+  - min-width: 601px = tablet adjustments
+  - min-width: 901px = desktop adjustments
+*/
+
 /* Tokens */
 :root {
   --space-1: 6px;

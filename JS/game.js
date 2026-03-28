@@ -7,7 +7,7 @@
 /*
   File role:
   - Owns shell/UI flow (title, modal, pause, win, impact screens)
-  - Contains legacy card-grid mode helpers
+  - Contains fallback card-grid mode helpers
   - Exposes screen/confetti hooks used by solitaire module
 */
 
@@ -110,7 +110,7 @@ let isStartingGame = false;
 
 async function startSelectedMode() {
   // Preferred runtime path: launch module-based solitaire mode.
-  // Falls back to legacy local mode if module bootstrap fails.
+  // Falls back to local mode if module bootstrap fails.
   if (isStartingGame) return;
   isStartingGame = true;
 
@@ -128,7 +128,7 @@ async function startSelectedMode() {
       return;
     }
 
-    // Fallback to legacy mode if solitaire initializer is unavailable.
+    // Fallback mode if solitaire initializer is unavailable.
     initGame();
   } catch (e) {
     console.error('Failed to start selected mode. Falling back to legacy init.', e);
@@ -194,7 +194,7 @@ function renderGrid() {
 // =============================================
 
 function initGame() {
-  // Legacy mode initializer (kept for fallback safety).
+  // Fallback mode initializer (kept for safety).
   state = freshState();
   state.cards = buildDeck();
 

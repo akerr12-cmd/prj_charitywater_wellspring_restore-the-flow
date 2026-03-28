@@ -2,6 +2,20 @@
    GAMEPLAY LAYER (MOBILE FIRST)
    ============================================= */
 
+/*
+  Owns:
+  - Pause overlay and game-shell viewport fitting
+  - Header/HUD compact behavior
+  - Board layout modes (stacked vs side-by-side)
+  - Card sizing/typography fit in constrained heights
+  - Mobile compact mode (<400 shortest side)
+
+  Breakpoint strategy:
+  - Base = mobile-first gameplay defaults
+  - max-height/max-width media queries for compact/short screens
+  - min-width: 601px, 1320px for larger layout progression
+*/
+
 /* Pause Overlay */
 .pause-overlay {
   display: none;

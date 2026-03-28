@@ -40,7 +40,7 @@ html, body {
 }
 .screen.active { display: flex; flex-direction: column; }
 
-/* Title and portrait-warning styles moved to styles/base.css. */
+/* Title and portrait-warning styles are maintained in styles/base.css. */
 
 /* ---- Buttons ---- */
 .btn {
@@ -68,7 +68,7 @@ html, body {
 .btn-icon-only { padding: 10px; border-radius: 50%; }
 .btn:disabled  { opacity: 0.45; cursor: not-allowed; transform: none; }
 
-/* Modal/how-to styles moved to styles/modal.css. */
+/* Modal/how-to styles are maintained in styles/modal.css. */
 
 /* =============================================
    GAME SCREEN
@@ -547,8 +547,8 @@ html, body {
   to   { border-color: rgba(255,152,0,0.7); }
 }
 
-/* Win/impact styles moved to styles/end-screens.css.
-   Pause overlay styles moved to styles/gameplay.css. */
+/* Win/impact styles are maintained in styles/end-screens.css.
+  Pause overlay styles are maintained in styles/gameplay.css. */
 
 
 /* =============================================
@@ -807,8 +807,7 @@ html, body {
   background: rgba(255,201,7,0.12);
 }
 
-/* Legacy desktop-first solitaire responsive blocks removed in Phase 2.
-   Gameplay breakpoints now live in the mobile-first sections below. */
+/* Gameplay breakpoints are defined in the split mobile-first layers. */
 
 /* =============================================
    RESPONSIVE
@@ -835,10 +834,9 @@ html, body {
   .card-emoji { font-size: 1.3rem; }
 }
 
-/* Removed legacy unscoped mobile/desktop gameplay layer in Phase 2.
-   All gameplay responsiveness is now handled by #game-screen scoped rules. */
+/* Gameplay responsiveness is handled by #game-screen scoped rules. */
 
-/* Footer and #game-screen fit/compact rules moved to styles/base.css and styles/gameplay.css. */
+/* Footer and #game-screen fit/compact rules are maintained in styles/base.css and styles/gameplay.css. */
 
 /* Accessibility */
 .card:focus-visible .card-inner { outline: 3px solid var(--yellow); outline-offset: 3px; }
@@ -846,8 +844,8 @@ html, body {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
-/* #game-screen responsive fit and compact breakpoints moved to styles/gameplay.css. */
+/* #game-screen responsive fit and compact breakpoints are maintained in styles/gameplay.css. */
 
-/* Mobile-first base/gameplay/modal/end-screen overrides moved to:
-   styles/base.css, styles/gameplay.css, styles/modal.css, styles/end-screens.css */
+/* Split mobile-first layers:
+  styles/base.css, styles/gameplay.css, styles/modal.css, styles/end-screens.css */
 

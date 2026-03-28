@@ -2,6 +2,17 @@
   MODAL LAYER (MOBILE FIRST)
   ============================================= */
 
+/*
+  Owns:
+  - How-to modal overlay and panel layout
+  - Modal typography and close affordance
+  - How-to content blocks and card-type badges
+
+  Breakpoint strategy:
+  - Base = compact, readable mobile modal
+  - min-width: 901px = larger desktop panel padding
+*/
+
 /* Overlay */
 .modal-overlay {
   display: none;

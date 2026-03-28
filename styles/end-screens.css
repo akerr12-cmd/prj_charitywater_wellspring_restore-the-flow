@@ -2,6 +2,16 @@
   END SCREENS LAYER (MOBILE FIRST)
   ============================================= */
 
+/*
+  Owns:
+  - Win screen layout, confetti canvas, and wave visuals
+  - Impact report screen cards and supporting copy styles
+
+  Breakpoint strategy:
+  - Base = stacked, mobile-readable stats presentation
+  - min-width: 601px = two-column stats grid
+*/
+
 /* Win Screen */
 #win-screen {
   align-items: center;
