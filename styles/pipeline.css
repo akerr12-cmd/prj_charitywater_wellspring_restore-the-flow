@@ -48,6 +48,18 @@
   flex-wrap: wrap;
 }
 
+#game-mute-btn.btn-audio-compact {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 0.74rem;
+  line-height: 1;
+}
+
+.audio-status-game {
+  margin: 2px 0 0;
+  align-self: flex-start;
+}
+
 #reroute-btn {
   border-color: rgba(79, 187, 239, 0.55);
 }

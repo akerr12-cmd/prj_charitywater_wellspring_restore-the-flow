@@ -65,10 +65,15 @@
                 <button id="how-to-btn" class="btn btn-secondary">
                     📖 How to Play
                 </button>
+                <button id="mute-btn" class="btn btn-secondary" aria-label="Toggle audio">
+                    🔊 Mute
+                </button>
                 <button id="quit-btn" class="btn btn-secondary">
                     ✕ Quit
                 </button>
             </nav>
+
+            <p id="audio-status" class="audio-status" aria-live="polite">Audio: On</p>
 
             <div class="title-link-wrap">
                 <a href="https://www.charitywater.org/uk/main" target="_blank" rel="noopener noreferrer" class="charity-water-link">
@@ -244,6 +249,7 @@
                 <button id="pause-btn" class="btn btn-secondary btn-small" aria-label="Pause game">⏸ Pause</button>
                 <button id="reset-btn" class="btn btn-secondary btn-small" aria-label="Restart game">↺ Reset</button>
                 <button id="menu-btn" class="btn btn-secondary btn-small" aria-label="Return to main menu">⬅ Menu</button>
+                <button id="game-mute-btn" class="btn btn-secondary btn-small btn-audio-compact" aria-label="Toggle audio">🔊 Mute</button>
                 <label class="difficulty-control" for="difficulty-mode">
                     <span>Difficulty</span>
                     <select id="difficulty-mode" aria-label="Select difficulty mode">
@@ -253,6 +259,8 @@
                     </select>
                 </label>
             </div>
+
+            <p id="audio-status-game" class="audio-status audio-status-game" aria-live="polite">Audio: On</p>
 
             <div class="pipeline-stats" aria-live="polite">
                 <div class="pipeline-stat-chip">

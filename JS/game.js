@@ -1009,6 +1009,11 @@ function createAudioManager() {
   let bgNodes = [];
   let currentScreen = null;
   let unlocked = false;
+  let bgAudioElements = {};
+  let currentBgAudio = null;
+  let isMuted = localStorage.getItem('audioMuted') === 'true';
+  let musicEnabled = !isMuted;
+  let sfxEnabled = !isMuted;
 
   function ensureContext() {
     if (ctx) return ctx;
@@ -1018,6 +1023,31 @@ function createAudioManager() {
 
     ctx = new AudioCtx();
     return ctx;
+  }
+
+  function initAudioElements() {
+    // Initialize background music audio elements for each screen
+    bgAudioElements = {
+      title: createBgAudioElement('audio/title-screen.mp3'),
+      game: createBgAudioElement('audio/game-screen.mp3'),
+      win: createBgAudioElement('audio/win-screen.mp3'),
+      impact: createBgAudioElement('audio/impact-screen.mp3'),
+      twist: createBgAudioElement('audio/twist-event.mp3'),
+    };
+    
+    // Apply mute state to all audio elements
+    Object.values(bgAudioElements).forEach(audio => {
+      audio.muted = isMuted || !musicEnabled;
+    });
+  }
+
+  function createBgAudioElement(src) {
+    const audio = new Audio();
+    audio.src = src;
+    audio.loop = true;
+    audio.volume = 0.6;
+    audio.muted = isMuted || !musicEnabled;
+    return audio;
   }
 
   function unlock() {
@@ -1031,12 +1061,80 @@ function createAudioManager() {
     }
 
     unlocked = true;
+    if (!Object.keys(bgAudioElements).length) {
+      initAudioElements();
+    }
     if (currentScreen) {
       setScreenMusic(currentScreen);
     }
   }
 
+  function updateAudioUi() {
+    const muteBtn = document.getElementById('mute-btn');
+    const gameMuteBtn = document.getElementById('game-mute-btn');
+    const statusTitle = document.getElementById('audio-status');
+    const statusGame = document.getElementById('audio-status-game');
+
+    const buttonText = isMuted ? '🔇 Unmute' : '🔊 Mute';
+    const statusText = isMuted ? 'Audio: Muted' : 'Audio: On';
+
+    if (muteBtn) {
+      muteBtn.textContent = buttonText;
+      muteBtn.setAttribute('aria-pressed', String(isMuted));
+      muteBtn.setAttribute('aria-label', isMuted ? 'Unmute audio' : 'Mute audio');
+    }
+
+    if (gameMuteBtn) {
+      gameMuteBtn.textContent = buttonText;
+      gameMuteBtn.setAttribute('aria-pressed', String(isMuted));
+      gameMuteBtn.setAttribute('aria-label', isMuted ? 'Unmute audio' : 'Mute audio');
+    }
+
+    if (statusTitle) statusTitle.textContent = statusText;
+    if (statusGame) statusGame.textContent = statusText;
+  }
+
+  function toggleMute() {
+    isMuted = !isMuted;
+    musicEnabled = !isMuted;
+    sfxEnabled = !isMuted;
+    localStorage.setItem('audioMuted', isMuted);
+    
+    // Update all audio elements
+    Object.values(bgAudioElements).forEach(audio => {
+      audio.muted = isMuted;
+    });
+
+    updateAudioUi();
+    
+    return isMuted;
+  }
+
+  function setMusicEnabled(enabled) {
+    musicEnabled = enabled && !isMuted;
+    if (currentBgAudio) {
+      currentBgAudio.muted = !musicEnabled;
+    }
+    updateAudioUi();
+  }
+
+  function setSfxEnabled(enabled) {
+    sfxEnabled = enabled && !isMuted;
+    updateAudioUi();
+  }
+
   function stopBackground() {
+    // Stop any currently playing background audio
+    if (currentBgAudio) {
+      try {
+        currentBgAudio.pause();
+        currentBgAudio.currentTime = 0;
+      } catch (_) {
+        // Ignore pause errors
+      }
+    }
+
+    // Also stop synthesized audio (legacy fallback)
     bgNodes.forEach(node => {
       try {
         node.stop?.();
@@ -1090,6 +1188,8 @@ function createAudioManager() {
   }
 
   function tone(freq, duration, type, volume, delay = 0) {
+    if (!sfxEnabled) return;
+    
     const audioCtx = ensureContext();
     if (!audioCtx || !unlocked) return;
 
@@ -1110,60 +1210,94 @@ function createAudioManager() {
   }
 
   function playSfx(name) {
-    if (!unlocked) return;
+    if (!unlocked || !sfxEnabled) return;
 
     if (name === 'click') {
-      tone(540, 0.07, 'triangle', 0.03);
+      tone(540, 0.07, 'triangle', 0.08);
       return;
     }
 
     if (name === 'place') {
-      tone(620, 0.08, 'triangle', 0.045);
-      tone(760, 0.07, 'triangle', 0.035, 0.06);
+      tone(620, 0.08, 'triangle', 0.12);
+      tone(760, 0.07, 'triangle', 0.09, 0.06);
       return;
     }
 
     if (name === 'invalid') {
-      tone(190, 0.12, 'square', 0.035);
+      tone(190, 0.12, 'square', 0.1);
       return;
     }
 
     if (name === 'milestone') {
-      tone(700, 0.08, 'sine', 0.05);
-      tone(880, 0.1, 'sine', 0.05, 0.1);
+      tone(700, 0.08, 'sine', 0.15);
+      tone(880, 0.1, 'sine', 0.15, 0.1);
       return;
     }
 
     if (name === 'win') {
-      tone(660, 0.12, 'sine', 0.05);
-      tone(880, 0.15, 'sine', 0.06, 0.1);
-      tone(1100, 0.18, 'sine', 0.06, 0.24);
+      tone(660, 0.12, 'sine', 0.15);
+      tone(880, 0.15, 'sine', 0.18, 0.1);
+      tone(1100, 0.18, 'sine', 0.18, 0.24);
       return;
     }
 
     if (name === 'miss') {
-      tone(220, 0.1, 'sawtooth', 0.025);
+      tone(220, 0.1, 'sawtooth', 0.08);
       return;
     }
   }
 
   function setScreenMusic(screenName) {
     currentScreen = screenName;
-    const profiles = {
-      title: { type: 'sine', freqA: 220, freqB: 277, volume: 0.012, lfoHz: 0.09, lfoDepth: 0.004 },
-      game: { type: 'triangle', freqA: 170, freqB: 214, volume: 0.015, lfoHz: 0.12, lfoDepth: 0.005 },
-      win: { type: 'sine', freqA: 330, freqB: 392, volume: 0.015, lfoHz: 0.18, lfoDepth: 0.006 },
-      impact: { type: 'triangle', freqA: 196, freqB: 247, volume: 0.012, lfoHz: 0.1, lfoDepth: 0.004 },
-    };
+    
+    // Initialize audio elements if not already done
+    if (!Object.keys(bgAudioElements).length) {
+      initAudioElements();
+    }
 
-    const selected = profiles[screenName] || profiles.title;
-    startBackground(selected);
+    // Stop current background audio
+    stopBackground();
+
+    // Play the audio file for this screen if it exists
+    const audioFile = bgAudioElements[screenName];
+    if (audioFile && unlocked) {
+      audioFile.currentTime = 0;
+      audioFile.play().catch(() => {
+        // If audio playback fails, fall back to synthesized audio
+        const profiles = {
+          title: { type: 'sine', freqA: 220, freqB: 277, volume: 0.012, lfoHz: 0.09, lfoDepth: 0.004 },
+          game: { type: 'triangle', freqA: 170, freqB: 214, volume: 0.015, lfoHz: 0.12, lfoDepth: 0.005 },
+          win: { type: 'sine', freqA: 330, freqB: 392, volume: 0.015, lfoHz: 0.18, lfoDepth: 0.006 },
+          impact: { type: 'triangle', freqA: 196, freqB: 247, volume: 0.012, lfoHz: 0.1, lfoDepth: 0.004 },
+        };
+        const selected = profiles[screenName] || profiles.title;
+        startBackground(selected);
+      });
+      currentBgAudio = audioFile;
+    } else if (!unlocked) {
+      // Queue the audio to play once unlocked
+      return;
+    } else {
+      // Fallback to synthesized audio if no file found
+      const profiles = {
+        title: { type: 'sine', freqA: 220, freqB: 277, volume: 0.012, lfoHz: 0.09, lfoDepth: 0.004 },
+        game: { type: 'triangle', freqA: 170, freqB: 214, volume: 0.015, lfoHz: 0.12, lfoDepth: 0.005 },
+        win: { type: 'sine', freqA: 330, freqB: 392, volume: 0.015, lfoHz: 0.18, lfoDepth: 0.006 },
+        impact: { type: 'triangle', freqA: 196, freqB: 247, volume: 0.012, lfoHz: 0.1, lfoDepth: 0.004 },
+      };
+      const selected = profiles[screenName] || profiles.title;
+      startBackground(selected);
+    }
   }
 
   return {
     unlock,
     playSfx,
     setScreenMusic,
+    toggleMute,
+    setMusicEnabled,
+    setSfxEnabled,
+    updateAudioUi,
   };
 }
 
@@ -1277,6 +1411,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Title screen
   $('start-btn')?.addEventListener('click',    startSelectedMode);
   $('how-to-btn')?.addEventListener('click',   () => openModal('how-to-modal'));
+  $('mute-btn')?.addEventListener('click',     () => gameAudio.toggleMute());
+  gameAudio.updateAudioUi();
+  
   $('quit-btn')?.addEventListener('click',     () => {
     // Browsers only allow script-closing windows in limited cases (e.g., script-opened tabs).
     // Try the standard close path first, then a compatible fallback.
@@ -1308,6 +1445,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Game controls
   $('pause-btn')?.addEventListener('click',    pauseGame);
+  $('game-mute-btn')?.addEventListener('click', () => gameAudio.toggleMute());
   $('skip-btn')?.addEventListener('click',     onSkip);
   $('reset-btn')?.addEventListener('click',    startSelectedMode);
   $('menu-btn')?.addEventListener('click',     () => {

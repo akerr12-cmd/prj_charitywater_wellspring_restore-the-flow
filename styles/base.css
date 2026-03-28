@@ -261,6 +261,20 @@ h1 span { color: var(--yellow); }
   gap: 8px;
 }
 
+.audio-status {
+  margin: 10px auto 0;
+  padding: 6px 10px;
+  width: fit-content;
+  border-radius: 999px;
+  background: rgba(10, 45, 62, 0.74);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  color: var(--light-blue);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .sim-account-card {
   width: 100%;
   margin: 2px auto 14px;
