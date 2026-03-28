@@ -117,13 +117,19 @@
                     chain for big bonuses.</p>
             </div>
 
+            <div class="card-type-item">
+                <span class="card-type-badge badge-tool">Consumable</span>
+                <p>One-time support cards that trigger instant effects like drawing cards, clearing locks, or boosting progress.</p>
+            </div>
+
         </div>
     </div>
 
     <div class="how-to-section">
         <h3>Board Layout</h3>
         <ul>
-            <li><strong>Pipeline Board</strong> — Four slots: Tool, Challenge, Solution, Impact.</li>
+            <li><strong>Pipeline Board</strong> — Five slots: Tool, Challenge, Solution, Impact, Consumable.</li>
+            <li><strong>Booster Bar</strong> — Tap boosters to trigger limited, high-impact tactical effects.</li>
             <li><strong>Challenge Slot</strong> — Auto-spawns a new Challenge each round.</li>
             <li><strong>Hand Row</strong> — Your playable cards. Tap a card, then tap a valid slot.</li>
             <li><strong>Twist Layer</strong> — Displays active hazards like locks, theft, or heatwave events.</li>
@@ -137,6 +143,7 @@
             <li><strong>Tool Slot</strong> accepts only Tool cards.</li>
             <li><strong>Solution Slot</strong> accepts only matching Solution cards for the current Challenge.</li>
             <li><strong>Impact Slot</strong> accepts only Impact cards, after a valid Solution is placed.</li>
+            <li><strong>Consumable Slot</strong> accepts only Consumable cards and triggers their effect immediately.</li>
         </ul>
         <p>When all four slots are filled, the run resolves, rewards are granted, and the board resets for the next challenge.</p>
     </div>
@@ -257,6 +264,8 @@
             <div id="pipeline-progress-fill" class="pipeline-progress-fill"></div>
         </div>
 
+        <div id="booster-bar" class="booster-bar" role="group" aria-label="Boosters"></div>
+
         <div class="pipeline-layout">
             <div id="pipeline-board" class="pipeline-board" role="group" aria-label="Pipeline slots">
                 <button class="pipeline-slot" data-slot="tool" aria-label="Tool slot" type="button">
@@ -273,6 +282,10 @@
                 </button>
                 <button class="pipeline-slot" data-slot="impact" aria-label="Impact slot" type="button">
                     <span class="slot-label">Impact</span>
+                    <div class="slot-card-host"></div>
+                </button>
+                <button class="pipeline-slot" data-slot="consumable" aria-label="Consumable slot" type="button">
+                    <span class="slot-label">Consumable</span>
                     <div class="slot-card-host"></div>
                 </button>
             </div>

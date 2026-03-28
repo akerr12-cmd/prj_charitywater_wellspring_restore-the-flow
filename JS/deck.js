@@ -243,5 +243,90 @@ export const FULL_DECK = [
   { id: 52, pairId: 40, type: 'impact', name: 'Hope Returned', emoji: '✨',
     description: 'Clean water brings a brighter future.' },
 
+
+  /* ============================================================
+     CONSUMABLES (8)
+     ============================================================ */
+  {
+    id: 53,
+    pairId: 41,
+    type: 'consumable',
+    name: 'Supply Crate',
+    emoji: '🧰',
+    description: 'Instantly restock your hand with emergency supplies.',
+    consumableEffect: 'supply_crate',
+    effectLabel: 'Draw 2 cards'
+  },
+  {
+    id: 54,
+    pairId: 42,
+    type: 'consumable',
+    name: 'Rapid Delivery',
+    emoji: '🚁',
+    description: 'Airdropped resources accelerate your response.',
+    consumableEffect: 'supply_crate',
+    effectLabel: 'Draw 2 cards'
+  },
+  {
+    id: 55,
+    pairId: 43,
+    type: 'consumable',
+    name: 'Pressure Stabilizer Gel',
+    emoji: '🧴',
+    description: 'Quick sealant that unlocks jammed valves.',
+    consumableEffect: 'lock_release',
+    effectLabel: 'Clear active locks'
+  },
+  {
+    id: 56,
+    pairId: 44,
+    type: 'consumable',
+    name: 'Volunteer Surge',
+    emoji: '🙌',
+    description: 'A trained support team boosts field progress.',
+    consumableEffect: 'progress_burst',
+    effectLabel: '+6 progress and +60 score'
+  },
+  {
+    id: 57,
+    pairId: 45,
+    type: 'consumable',
+    name: 'Impact Guard',
+    emoji: '🛡️',
+    description: 'Protects your next impact card from theft.',
+    consumableEffect: 'impact_guard',
+    effectLabel: 'Blocks next theft'
+  },
+  {
+    id: 58,
+    pairId: 46,
+    type: 'consumable',
+    name: 'Field Intel',
+    emoji: '🗺️',
+    description: 'Scouts reveal the exact solution needed.',
+    consumableEffect: 'solution_hint',
+    effectLabel: 'Inject a matching card'
+  },
+  {
+    id: 59,
+    pairId: 47,
+    type: 'consumable',
+    name: 'Hydration Pack',
+    emoji: '💧',
+    description: 'Emergency reserves keep operations moving.',
+    consumableEffect: 'progress_burst',
+    effectLabel: '+6 progress and +60 score'
+  },
+  {
+    id: 60,
+    pairId: 48,
+    type: 'consumable',
+    name: 'Unlock Key',
+    emoji: '🗝️',
+    description: 'Bypasses temporary mechanical locks.',
+    consumableEffect: 'lock_release',
+    effectLabel: 'Clear active locks'
+  },
+
 ];
 

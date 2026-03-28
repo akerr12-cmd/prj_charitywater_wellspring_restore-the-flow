@@ -20,7 +20,8 @@ const DIFFICULTY_PROFILES = {
     deadlockAssistProgress: 3,
     invalidTapPenalty: 0,
     manualReroutePenalty: 0,
-    scoreValues: { tool: 95, challenge: 155, solution: 205, impact: 305 },
+    consumableDropChance: 0.44,
+    scoreValues: { tool: 95, challenge: 155, solution: 205, impact: 305, consumable: 100 },
   },
   normal: {
     id: 'normal',
@@ -38,7 +39,8 @@ const DIFFICULTY_PROFILES = {
     deadlockAssistProgress: 1,
     invalidTapPenalty: 5,
     manualReroutePenalty: 8,
-    scoreValues: { tool: 80, challenge: 130, solution: 180, impact: 260 },
+    consumableDropChance: 0.35,
+    scoreValues: { tool: 80, challenge: 130, solution: 180, impact: 260, consumable: 90 },
   },
   hard: {
     id: 'hard',
@@ -56,7 +58,8 @@ const DIFFICULTY_PROFILES = {
     deadlockAssistProgress: 0,
     invalidTapPenalty: 12,
     manualReroutePenalty: 20,
-    scoreValues: { tool: 75, challenge: 125, solution: 175, impact: 255 },
+    consumableDropChance: 0.28,
+    scoreValues: { tool: 75, challenge: 125, solution: 175, impact: 255, consumable: 85 },
   },
 };
 
@@ -69,10 +72,36 @@ const MILESTONES = [
 
 const DEBUG_EVENT_LOG_LIMIT = 240;
 
-const SLOT_ORDER = ['tool', 'challenge', 'solution', 'impact'];
+const SLOT_ORDER = ['tool', 'challenge', 'solution', 'impact', 'consumable'];
+const PIPELINE_COMPLETE_SLOTS = ['tool', 'challenge', 'solution', 'impact'];
 
-const DEFAULT_SCORE_VALUES = { tool: 80, challenge: 130, solution: 180, impact: 260 };
+const DEFAULT_SCORE_VALUES = { tool: 80, challenge: 130, solution: 180, impact: 260, consumable: 90 };
 const PEOPLE_PER_PIPELINE = 55;
+const EFFECT_CLASS_DURATION_MS = 620;
+
+const BOOSTERS = [
+  {
+    id: 'deep_draw',
+    name: 'Deep Draw',
+    emoji: '📦',
+    description: 'Draw 2 cards.',
+    charges: { easy: 2, normal: 1, hard: 1 },
+  },
+  {
+    id: 'lock_breaker',
+    name: 'Lock Breaker',
+    emoji: '🗝️',
+    description: 'Remove all active locks.',
+    charges: { easy: 2, normal: 1, hard: 1 },
+  },
+  {
+    id: 'momentum',
+    name: 'Momentum',
+    emoji: '⚡',
+    description: 'Gain +8 progress and +100 score.',
+    charges: { easy: 1, normal: 1, hard: 1 },
+  },
+];
 
 let P = freshPipelineState();
 let D = DIFFICULTY_PROFILES[DEFAULT_DIFFICULTY];
@@ -89,7 +118,10 @@ function freshPipelineState() {
       challenge: null,
       solution: null,
       impact: null,
+      consumable: null,
     },
+    boosters: {},
+    impactShield: 0,
     selectedHandIndex: -1,
     score: 0,
     progress: 0,
@@ -117,6 +149,9 @@ function freshPipelineState() {
       autoDrawSaves: 0,
       safetyInjects: 0,
       impactsStolen: 0,
+      consumablesUsed: 0,
+      consumableDrops: 0,
+      boostersUsed: 0,
       twistCounts: {
         heatwave: 0,
         contamination_spread: 0,
@@ -202,6 +237,7 @@ export function initPipelineGame() {
   stopPipelineGame();
   P = freshPipelineState();
   P.difficulty = D.id;
+  resetBoostersForRun();
 
   setupDecks();
   drawCards(D.startHand);
@@ -209,6 +245,7 @@ export function initPipelineGame() {
   bindPipelineInteractions();
   startTimer();
 
+  renderBoosterBar();
   renderPipeline();
   renderHand();
   bindDebugHudControls();
@@ -216,6 +253,13 @@ export function initPipelineGame() {
   checkForDeadlock();
   recordDebugEvent('game_start', { handSize: P.hand.length, difficulty: D.id });
   showToast(buildDifficultyIntroMessage());
+}
+
+function resetBoostersForRun() {
+  P.boosters = {};
+  BOOSTERS.forEach(booster => {
+    P.boosters[booster.id] = Math.max(0, booster.charges[D.id] || 0);
+  });
 }
 
 function buildDifficultyIntroMessage() {
@@ -292,6 +336,98 @@ function bindPipelineInteractions() {
   }
 }
 
+function renderBoosterBar() {
+  const bar = $('booster-bar');
+  if (!bar) return;
+
+  bar.innerHTML = '';
+
+  BOOSTERS.forEach(booster => {
+    const charges = Math.max(0, P.boosters[booster.id] || 0);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'booster-btn';
+    if (charges <= 0) {
+      btn.classList.add('is-empty');
+      btn.disabled = true;
+    }
+
+    btn.setAttribute('aria-label', `${booster.name}. ${booster.description} Charges left: ${charges}.`);
+    btn.innerHTML = `
+      <span class="booster-name"><span aria-hidden="true">${booster.emoji}</span>${booster.name}</span>
+      <span class="booster-count" aria-hidden="true">${charges}</span>
+    `;
+
+    btn.onclick = () => {
+      activateBooster(booster.id);
+    };
+
+    bar.appendChild(btn);
+  });
+}
+
+function activateBooster(boosterId) {
+  if (P.gameOver) return;
+
+  const charges = Math.max(0, P.boosters[boosterId] || 0);
+  if (charges <= 0) {
+    showToast('That booster is out of charges.');
+    return;
+  }
+
+  let used = false;
+
+  if (boosterId === 'deep_draw') {
+    const before = P.hand.length;
+    drawCards(2);
+    used = P.hand.length > before;
+    if (used) {
+      triggerScreenEffect('effect-draw');
+      showToast('Booster used: Deep Draw activated.');
+    }
+  }
+
+  if (boosterId === 'lock_breaker') {
+    const unlocked = clearAllLocks();
+    used = unlocked > 0;
+    if (used) {
+      triggerScreenEffect('effect-lock');
+      showToast(`Booster used: ${unlocked} lock${unlocked === 1 ? '' : 's'} removed.`);
+    }
+  }
+
+  if (boosterId === 'momentum') {
+    P.progress += 8;
+    P.score += 100;
+    checkMilestones();
+    triggerScreenEffect('effect-progress');
+    showToast('Booster used: Momentum surge (+8 progress, +100 score).');
+    used = true;
+
+    if (P.progress >= D.winTargetProgress) {
+      updateHud();
+      renderBoosterBar();
+      triggerWin();
+      return;
+    }
+  }
+
+  if (!used) {
+    showToast('Booster cannot be used right now.');
+    return;
+  }
+
+  P.boosters[boosterId] = charges - 1;
+  P.telemetry.boostersUsed += 1;
+  window.gameAudio?.playSfx?.('click');
+  recordDebugEvent('booster_used', { boosterId, remaining: P.boosters[boosterId] });
+
+  updateHud();
+  updateSlotHighlights();
+  renderBoosterBar();
+  checkForDeadlock();
+}
+
 function drawCards(count) {
   for (let i = 0; i < count; i++) {
     refillDrawPileIfNeeded();
@@ -362,7 +498,7 @@ function onSlotTap(slot) {
   }
 
   if (slot === 'impact' && P.stealNextImpact) {
-    const hasCounter = P.pipeline.tool?.name === 'Tool Kit';
+    const hasCounter = P.pipeline.tool?.name === 'Tool Kit' || P.impactShield > 0;
     P.stealNextImpact = false;
     if (!hasCounter) {
       P.telemetry.impactsStolen += 1;
@@ -381,7 +517,12 @@ function onSlotTap(slot) {
       checkForDeadlock();
       return;
     }
-    showTwistBanner('Tool Kit countered Water Theft.');
+
+    if (P.impactShield > 0) {
+      P.impactShield -= 1;
+    }
+
+    showTwistBanner('Water Theft blocked by your defenses.');
   }
 
   P.telemetry.turns += 1;
@@ -398,13 +539,29 @@ function onSlotTap(slot) {
   updateHud();
   updateSlotHighlights();
 
-  if (isPipelineComplete()) {
+  if (slot === 'consumable') {
+    setTimeout(resolveConsumablePlacement, 180);
+  } else if (isPipelineComplete()) {
     setTimeout(resolvePipelineCompletion, 220);
   } else {
     refillHand();
     checkForDeadlock();
     updateDebugHud();
   }
+}
+
+function resolveConsumablePlacement() {
+  const card = P.pipeline.consumable;
+  if (!card) return;
+
+  applyConsumableEffect(card);
+  P.pipeline.consumable = null;
+  P.discardPile.push(card);
+
+  renderPipeline();
+  refillHand();
+  checkForDeadlock();
+  updateDebugHud();
 }
 
 function canPlaceCard(slot, card) {
@@ -425,6 +582,9 @@ function canPlaceCard(slot, card) {
   if (slot === 'impact') {
     if (card.type !== 'impact') return false;
     return Boolean(P.pipeline.solution);
+  }
+  if (slot === 'consumable') {
+    return card.type === 'consumable';
   }
   return false;
 }
@@ -471,13 +631,13 @@ function setSlotLockLabel(slotEl, text) {
 }
 
 function isPipelineComplete() {
-  return SLOT_ORDER.every(slot => Boolean(P.pipeline[slot]));
+  return PIPELINE_COMPLETE_SLOTS.every(slot => Boolean(P.pipeline[slot]));
 }
 
 function resolvePipelineCompletion() {
   if (!isPipelineComplete()) return;
 
-  const earned = SLOT_ORDER.reduce((sum, slot) => {
+  const earned = PIPELINE_COMPLETE_SLOTS.reduce((sum, slot) => {
     const type = P.pipeline[slot]?.type;
     return sum + (D.scoreValues[type] || DEFAULT_SCORE_VALUES[type] || 0);
   }, 0);
@@ -505,14 +665,20 @@ function resolvePipelineCompletion() {
   if (P.pipeline.tool) P.discardPile.push(P.pipeline.tool);
   if (P.pipeline.solution) P.discardPile.push(P.pipeline.solution);
   if (P.pipeline.impact) P.discardPile.push(P.pipeline.impact);
+  if (P.pipeline.consumable) P.discardPile.push(P.pipeline.consumable);
 
   P.pipeline.tool = null;
   P.pipeline.solution = null;
   P.pipeline.impact = null;
   P.pipeline.challenge = null;
+  P.pipeline.consumable = null;
+
+  maybeDropConsumableToHand();
+  maybeRefillBoosterCharge();
 
   updateHud();
   renderPipeline();
+  renderBoosterBar();
 
   if (P.progress >= D.winTargetProgress) {
     triggerWin();
@@ -522,6 +688,39 @@ function resolvePipelineCompletion() {
   spawnNextChallenge();
   refillHand();
   checkForDeadlock();
+}
+
+function maybeDropConsumableToHand() {
+  const chance = Math.max(0, Math.min(1, D.consumableDropChance || 0));
+  if (chance <= 0) return;
+  if (Math.random() >= chance) return;
+
+  const options = FULL_DECK.filter(card => card.type === 'consumable');
+  if (options.length === 0) return;
+
+  const picked = cloneCard(options[Math.floor(Math.random() * options.length)]);
+  if (P.hand.length < D.maxHandSize) {
+    P.hand.push(picked);
+  } else {
+    P.drawPile.unshift(picked);
+  }
+
+  P.telemetry.consumableDrops += 1;
+  recordDebugEvent('consumable_drop', { card: picked.name, handSize: P.hand.length });
+  showTwistBanner(`Supply Drop! Consumable acquired: ${picked.name}.`);
+}
+
+function maybeRefillBoosterCharge() {
+  if (P.telemetry.pipelinesCompleted < 1) return;
+  if (P.telemetry.pipelinesCompleted % 3 !== 0) return;
+
+  const refillable = BOOSTERS.filter(b => (P.boosters[b.id] || 0) < (b.charges[D.id] || 0));
+  if (refillable.length === 0) return;
+
+  const picked = refillable[Math.floor(Math.random() * refillable.length)];
+  P.boosters[picked.id] = Math.min((picked.charges[D.id] || 0), (P.boosters[picked.id] || 0) + 1);
+  recordDebugEvent('booster_refilled', { boosterId: picked.id, charges: P.boosters[picked.id] });
+  showToast(`Booster recharged: ${picked.name}.`);
 }
 
 function refillHand() {
@@ -589,6 +788,10 @@ function buildCardEl(card) {
 }
 
 function buildCardDetailText(card) {
+  if (card?.type === 'consumable' && card?.effectLabel) {
+    return card.effectLabel;
+  }
+
   const text = String(card?.description || '').trim();
   if (!text) {
     return 'Mission card used to restore clean water access.';
@@ -726,6 +929,78 @@ function twistPipeLock() {
   P.lockTimers.set(slot, timerId);
 }
 
+function clearAllLocks() {
+  const locked = Array.from(P.lockedSlots);
+  if (locked.length === 0) return 0;
+
+  locked.forEach(slot => {
+    const timerId = P.lockTimers.get(slot);
+    if (timerId) {
+      clearTimeout(timerId);
+      P.lockTimers.delete(slot);
+    }
+    P.lockedSlots.delete(slot);
+    P.lockedUntil.delete(slot);
+  });
+
+  updateSlotHighlights();
+  return locked.length;
+}
+
+function applyConsumableEffect(card) {
+  const effect = card?.consumableEffect || 'supply_crate';
+  P.telemetry.consumablesUsed += 1;
+
+  if (effect === 'supply_crate') {
+    drawCards(2);
+    triggerScreenEffect('effect-draw');
+    showToast(`${card.name}: +2 cards.`);
+    recordDebugEvent('consumable_used', { effect, card: card.name, handSize: P.hand.length });
+    return;
+  }
+
+  if (effect === 'lock_release') {
+    const unlocked = clearAllLocks();
+    triggerScreenEffect('effect-lock');
+    showToast(unlocked > 0 ? `${card.name}: ${unlocked} lock${unlocked === 1 ? '' : 's'} cleared.` : `${card.name}: no active locks to clear.`);
+    recordDebugEvent('consumable_used', { effect, card: card.name, unlocked });
+    return;
+  }
+
+  if (effect === 'progress_burst') {
+    P.progress += 6;
+    P.score += 60;
+    checkMilestones();
+    triggerScreenEffect('effect-progress');
+    showToast(`${card.name}: +6 progress and +60 score.`);
+    recordDebugEvent('consumable_used', { effect, card: card.name, progress: P.progress, score: P.score });
+    updateHud();
+    if (P.progress >= D.winTargetProgress) {
+      triggerWin();
+    }
+    return;
+  }
+
+  if (effect === 'impact_guard') {
+    P.impactShield += 1;
+    triggerScreenEffect('effect-lock');
+    showToast(`${card.name}: theft shield armed.`);
+    recordDebugEvent('consumable_used', { effect, card: card.name, shield: P.impactShield });
+    return;
+  }
+
+  if (effect === 'solution_hint') {
+    injectSafetyCard();
+    triggerScreenEffect('effect-draw');
+    showToast(`${card.name}: matching aid card deployed.`);
+    recordDebugEvent('consumable_used', { effect, card: card.name });
+    return;
+  }
+
+  showToast(`${card.name}: effect resolved.`);
+  recordDebugEvent('consumable_used', { effect: 'unknown', card: card.name });
+}
+
 function twistHeatwave() {
   P.timerRate = 2;
 
@@ -751,6 +1026,19 @@ function pulseBoard() {
       easing: 'ease-out',
     }
   );
+}
+
+function triggerScreenEffect(effectClass) {
+  const screen = $('game-screen');
+  if (!screen) return;
+
+  screen.classList.remove('effect-draw', 'effect-lock', 'effect-progress');
+  void screen.offsetWidth;
+  screen.classList.add(effectClass);
+
+  setTimeout(() => {
+    screen.classList.remove(effectClass);
+  }, EFFECT_CLASS_DURATION_MS);
 }
 
 function animateSlotPulse(slot, type) {
@@ -951,6 +1239,9 @@ function updateDebugHud() {
   setText('debug-safety-injects', P.telemetry.safetyInjects);
   setText('debug-impacts-stolen', P.telemetry.impactsStolen);
   setText('debug-invalid-taps', P.telemetry.invalidSlotTaps);
+  setText('debug-consumables-used', P.telemetry.consumablesUsed);
+  setText('debug-consumable-drops', P.telemetry.consumableDrops);
+  setText('debug-boosters-used', P.telemetry.boostersUsed);
   setText('debug-heatwaves', P.telemetry.twistCounts.heatwave);
   setText('debug-contamination', P.telemetry.twistCounts.contamination_spread);
   setText('debug-pipe-locks', P.telemetry.twistCounts.pipe_lock);
@@ -1027,6 +1318,8 @@ function getDebugSnapshot() {
     discardPileSize: P.discardPile.length,
     validMoveCount: countValidMoves(),
     challenge: P.pipeline.challenge?.name || null,
+    boosterCharges: { ...P.boosters },
+    impactShield: P.impactShield,
     telemetry: P.telemetry,
     debugEvents: P.debugEvents,
   };
