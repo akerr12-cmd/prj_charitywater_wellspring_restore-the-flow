@@ -314,13 +314,6 @@ function bindPipelineInteractions() {
     };
   });
 
-  const rerouteBtn = $('reroute-btn');
-  if (rerouteBtn) {
-    rerouteBtn.onclick = () => {
-      rerouteHand(false);
-    };
-  }
-
   const difficultySelect = $('difficulty-mode');
   if (difficultySelect && !difficultySelect.dataset.boundDifficulty) {
     difficultySelect.dataset.boundDifficulty = 'true';

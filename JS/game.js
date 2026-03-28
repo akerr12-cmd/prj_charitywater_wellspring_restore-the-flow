@@ -122,7 +122,7 @@ window.showScreen = showScreen;
 let isStartingGame = false;
 
 async function requestMobileFullscreen() {
-  const isMobileLike = window.matchMedia('(max-width: 900px)').matches;
+  const isMobileLike = window.matchMedia('(max-width: 899px)').matches;
   if (!isMobileLike) return;
 
   const doc = document;

@@ -60,10 +60,6 @@
   align-self: flex-start;
 }
 
-#reroute-btn {
-  border-color: rgba(79, 187, 239, 0.55);
-}
-
 .difficulty-control {
   display: inline-flex;
   align-items: center;
