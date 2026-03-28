@@ -1376,7 +1376,7 @@ function checkOrientation() {
 
 function initOrientationLock() {
   if (screen.orientation && screen.orientation.lock) {
-    screen.orientation.lock('landscape-primary').catch(() => {
+    screen.orientation.lock('landscape').catch(() => {
       // Silently fail if lock is not supported.
     });
   }
