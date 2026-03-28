@@ -8,6 +8,10 @@
         content="Wellspring: Restore the Flow — Strategic card challenges inspired by clean‑water impact. Fix what's broken. Restore what matters. Inspired by Charity: Water.">
     <title>Wellspring: Restore the Flow | Charity: Water</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="styles/base.css">
+    <link rel="stylesheet" href="styles/modal.css">
+    <link rel="stylesheet" href="styles/gameplay.css">
+    <link rel="stylesheet" href="styles/end-screens.css">
 </head>
 
 <body>
@@ -426,44 +430,6 @@
 
     <script src="JS/game.js"></script>
     <script type="module" src="JS/solitaire.js"></script>
-    
-    <script>
-        // ===========================================================
-        // LANDSCAPE ORIENTATION LOCK (Mobile)
-        // ===========================================================
-
-        function checkOrientation() {
-            const isPortrait = window.innerHeight > window.innerWidth;
-            const warning = document.getElementById('portrait-warning');
-
-            if (!warning) return;
-
-            if (isPortrait) {
-                warning.classList.add('show');
-                warning.setAttribute('aria-hidden', 'false');
-            } else {
-                warning.classList.remove('show');
-                warning.setAttribute('aria-hidden', 'true');
-            }
-        }
-
-        function initOrientationLock() {
-            if (screen.orientation && screen.orientation.lock) {
-                screen.orientation.lock('landscape-primary').catch(() => {
-                    // Silently fail if lock is not supported.
-                });
-            }
-
-            window.addEventListener('resize', checkOrientation);
-            window.addEventListener('orientationchange', checkOrientation);
-            checkOrientation();
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            initOrientationLock();
-            checkOrientation();
-        });
-    </script>
 
 </body>
 

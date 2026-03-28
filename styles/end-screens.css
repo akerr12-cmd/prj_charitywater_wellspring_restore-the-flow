@@ -1,0 +1,174 @@
+/* =============================================
+  END SCREENS LAYER (MOBILE FIRST)
+  ============================================= */
+
+/* Win Screen */
+#win-screen {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 100vh;
+  background: radial-gradient(ellipse at 50% 40%, #0d5e40 0%, #052d1e 60%, #041a13 100%);
+  overflow: hidden;
+  position: relative;
+}
+
+.confetti-canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.win-content {
+  position: relative;
+  z-index: 1;
+  padding: 40px 20px;
+  max-width: 480px;
+}
+
+.win-icon {
+  font-size: 4rem;
+  margin-bottom: 16px;
+  animation: floatBounce 2s ease-in-out infinite;
+}
+
+@keyframes floatBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+.win-title {
+  font-size: clamp(1.45rem, 8.5vw, 2.1rem);
+}
+
+.win-subtitle {
+  font-size: 0.95rem;
+  margin-bottom: 20px;
+}
+
+.win-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+.water-splash {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.wave {
+  position: absolute;
+  bottom: 0;
+  left: -100%;
+  width: 300%;
+  height: 100%;
+  background: rgba(30, 136, 196, 0.25);
+  border-radius: 40% 60% 40% 60% / 40% 40% 60% 60%;
+  animation: waveAnim 4s ease-in-out infinite;
+}
+
+.wave:nth-child(2) {
+  background: rgba(30, 136, 196, 0.15);
+  animation-duration: 5s;
+  animation-delay: -1.5s;
+}
+
+@keyframes waveAnim {
+  0%   { transform: translateX(0) rotate(0deg); }
+  50%  { transform: translateX(25%) rotate(3deg); }
+  100% { transform: translateX(0) rotate(0deg); }
+}
+
+/* Impact Screen */
+#impact-screen {
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(160deg, #0A2E3D 0%, #071e29 100%);
+  padding: 30px 20px;
+}
+
+.impact-content {
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+}
+
+.impact-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--yellow);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 24px;
+  opacity: 0.9;
+}
+
+.impact-headline {
+  font-size: clamp(1.25rem, 7vw, 1.9rem);
+}
+
+.impact-subhead {
+  font-size: 0.92rem;
+  margin-bottom: 22px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  padding: 14px 12px;
+  text-align: center;
+}
+
+.stat-card.highlight {
+  background: rgba(255,201,7,0.12);
+  border-color: rgba(255,201,7,0.3);
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--yellow);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.stat-desc {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.3;
+}
+
+.impact-story {
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.8);
+  line-height: 1.7;
+  margin-bottom: 18px;
+  padding: 12px;
+  border-left: 3px solid var(--yellow);
+  text-align: left;
+  background: rgba(255,255,255,0.04);
+  border-radius: 0 10px 10px 0;
+}
+
+.impact-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+/* Tablet Up */
+@media (min-width: 601px) {
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

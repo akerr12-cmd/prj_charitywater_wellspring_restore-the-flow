@@ -1,0 +1,110 @@
+/* =============================================
+  MODAL LAYER (MOBILE FIRST)
+  ============================================= */
+
+/* Overlay */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+}
+
+.modal-overlay.open { display: flex; }
+
+/* Panel */
+.modal {
+  background: #0f3d54;
+  border-radius: var(--radius-lg);
+  padding: 22px 18px;
+  max-width: 560px;
+  width: 100%;
+  max-height: calc(var(--app-vh, 100dvh) - 22px);
+  overflow-y: auto;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  position: relative;
+}
+
+.modal h2 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--yellow);
+  margin-bottom: 20px;
+}
+
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: var(--white);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover { background: rgba(255,255,255,0.2); }
+
+/* How-To Content */
+.how-to-section { margin-bottom: 22px; }
+
+.how-to-section h3 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--yellow);
+  margin-bottom: 10px;
+}
+
+.how-to-section p,
+.how-to-section li {
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.85);
+  line-height: 1.5;
+}
+
+.how-to-section ul { padding-left: 18px; }
+.how-to-section li { margin-bottom: 6px; }
+
+.card-type-list { display: flex; flex-direction: column; gap: 10px; }
+
+.card-type-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.06);
+}
+
+.card-type-badge {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.badge-tool      { background: var(--tool-color);      color: #fff; }
+.badge-challenge { background: var(--challenge-color); color: #fff; }
+.badge-solution  { background: var(--solution-color);  color: #fff; }
+.badge-impact    { background: var(--impact-color);    color: var(--dark-blue); }
+
+/* Desktop Up */
+@media (min-width: 901px) {
+  .modal {
+    padding: 32px 28px;
+  }
+}

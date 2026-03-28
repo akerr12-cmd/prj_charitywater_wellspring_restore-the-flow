@@ -702,11 +702,39 @@ function closeModal(id) {
   if (m) m.classList.remove('open');
 }
 
+function checkOrientation() {
+  const isPortrait = window.innerHeight > window.innerWidth;
+  const warning = $('portrait-warning');
+  if (!warning) return;
+
+  if (isPortrait) {
+    warning.classList.add('show');
+    warning.setAttribute('aria-hidden', 'false');
+  } else {
+    warning.classList.remove('show');
+    warning.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function initOrientationLock() {
+  if (screen.orientation && screen.orientation.lock) {
+    screen.orientation.lock('landscape-primary').catch(() => {
+      // Silently fail if lock is not supported.
+    });
+  }
+
+  window.addEventListener('resize', checkOrientation, { passive: true });
+  window.addEventListener('orientationchange', checkOrientation, { passive: true });
+  checkOrientation();
+}
+
 // =============================================
 // EVENT LISTENERS (wired after DOM ready)
 // =============================================
 
 document.addEventListener('DOMContentLoaded', () => {
+  initOrientationLock();
+
   function syncGameplayViewportVars() {
     const viewportWidth = Math.round(window.visualViewport?.width || window.innerWidth || 0);
     const viewportHeight = Math.round(window.visualViewport?.height || window.innerHeight || 0);
