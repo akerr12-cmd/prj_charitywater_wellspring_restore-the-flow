@@ -121,6 +121,29 @@ window.showScreen = showScreen;
 
 let isStartingGame = false;
 
+async function requestMobileFullscreen() {
+  const isMobileLike = window.matchMedia('(max-width: 900px)').matches;
+  if (!isMobileLike) return;
+
+  const doc = document;
+  const root = doc.documentElement;
+  const alreadyFullscreen = Boolean(doc.fullscreenElement || doc.webkitFullscreenElement);
+  if (alreadyFullscreen) return;
+
+  try {
+    if (root.requestFullscreen) {
+      await root.requestFullscreen();
+      return;
+    }
+
+    if (root.webkitRequestFullscreen) {
+      root.webkitRequestFullscreen();
+    }
+  } catch (_) {
+    // Ignore fullscreen failures; CSS viewport-fit fallback remains active.
+  }
+}
+
 async function startSelectedMode() {
   // Preferred runtime path: launch module-based pipeline mode.
   // Falls back to local mode if module bootstrap fails.
@@ -131,6 +154,8 @@ async function startSelectedMode() {
   if (startBtn) startBtn.disabled = true;
 
   try {
+    await requestMobileFullscreen();
+
     if (typeof window.initPipelineGame !== 'function') {
       await import('./pipeline.js');
     }

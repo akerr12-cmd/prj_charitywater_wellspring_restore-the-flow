@@ -760,6 +760,7 @@ function renderHand() {
     button.dataset.index = String(index);
     button.setAttribute('role', 'listitem');
     button.setAttribute('aria-label', `${card.name}, ${card.type}`);
+
     button.appendChild(buildCardEl(card));
 
     handRow.appendChild(button);
