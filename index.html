@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="styles/base.css">
     <link rel="stylesheet" href="styles/modal.css">
     <link rel="stylesheet" href="styles/gameplay.css">
+    <link rel="stylesheet" href="styles/pipeline.css">
     <link rel="stylesheet" href="styles/end-screens.css">
 </head>
 
@@ -76,10 +77,9 @@
      <div class="how-to-section">
         <h3>Goal</h3>
         <p>
-            Restore the community well to <strong>100%</strong> by organizing cards into
-            functional sequences, clearing challenges, and completing all four
-            foundation piles. When the final Solution is placed on the Well Card,
-            clean water is fully restored.
+            Restore the community well to <strong>100%</strong> by completing pipeline runs in this order:
+            <strong>Tool -> Challenge -> Solution -> Impact</strong>. Each completed run boosts score,
+            helps more people, and advances restoration progress.
         </p>
     </div>
 
@@ -117,34 +117,28 @@
     <div class="how-to-section">
         <h3>Board Layout</h3>
         <ul>
-            <li><strong>8 Tableau Columns</strong> — Cards stack downward. Only the top card of each column can be
-                moved.</li>
-            <li><strong>Water Tanks</strong> — Temporary storage slots (like FreeCells). Hold one card each.</li>
-            <li><strong>Foundations</strong> — Four piles: Tools, Solutions, Cleared Challenges, and Impact.</li>
-            <li><strong>Well Card</strong> — Hidden deep in the tableau. Revealing it is required to win.</li>
+            <li><strong>Pipeline Board</strong> — Four slots: Tool, Challenge, Solution, Impact.</li>
+            <li><strong>Challenge Slot</strong> — Auto-spawns a new Challenge each round.</li>
+            <li><strong>Hand Row</strong> — Your playable cards. Tap a card, then tap a valid slot.</li>
+            <li><strong>Twist Layer</strong> — Displays active hazards like locks, theft, or heatwave events.</li>
         </ul>
     </div>
 
     <div class="how-to-section">
-        <h3>Valid Sequences</h3>
-        <p>Cards can be stacked in the tableau only if they follow the pipeline logic:</p>
+        <h3>Placement Rules</h3>
+        <p>Selected cards can only go into valid pipeline slots:</p>
         <ul>
-            <li><strong>Tool → Tool</strong> — Build a tool chain.</li>
-            <li><strong>Tool → Solution</strong> — A prepared solution.</li>
-            <li><strong>Tool → Challenge</strong> — (Optional prep step, depending on the column.)</li>
-            <li><strong>Challenge → Solution</strong> — Clears the Challenge.</li>
-            <li><strong>Solution → Impact</strong> — Creates a scoring combo.</li>
-            <li><strong>Impact → Impact</strong> — Stack multipliers.</li>
+            <li><strong>Tool Slot</strong> accepts only Tool cards.</li>
+            <li><strong>Solution Slot</strong> accepts only matching Solution cards for the current Challenge.</li>
+            <li><strong>Impact Slot</strong> accepts only Impact cards, after a valid Solution is placed.</li>
         </ul>
-        <p><em>Invalid sequences</em> (e.g., Challenge → Challenge, Solution → Tool, Impact → Challenge) cannot be
-            placed.</p>
+        <p>When all four slots are filled, the run resolves, rewards are granted, and the board resets for the next challenge.</p>
     </div>
 
     <div class="how-to-section">
         <h3>Clearing Challenges</h3>
         <p>
-            Each Challenge has a matching Solution. When placed correctly, the Challenge is cleared,
-            hidden cards are revealed, and progress increases.
+            Every Challenge has one matching Solution. Place the correct Solution to clear the Challenge and keep the run alive.
         </p>
         <ul>
             <li><strong>Drought</strong> → Emergency Water Delivery</li>
@@ -165,32 +159,26 @@
     <div class="how-to-section">
         <h3>Impact Cards</h3>
         <p>
-            Impact cards represent the real-world effects of clean water. Playing them:
+            Impact cards finish the run and represent real-world change. Placing Impact:
         </p>
         <ul>
-            <li>Adds score</li>
-            <li>Increases “people helped”</li>
-            <li>Triggers multipliers when chained</li>
+            <li>Grants the biggest score burst of the run.</li>
+            <li>Increases "people helped" in your mission report.</li>
+            <li>Advances overall well restoration progress.</li>
         </ul>
     </div>
 
     <div class="how-to-section">
-        <h3>Water Tanks (Free Cells)</h3>
+        <h3>Hand Management</h3>
         <p>
-            Use Water Tanks to temporarily store cards while reorganizing the tableau.
-            Each tank holds <strong>one card</strong>. Use them wisely — they fill up fast.
+            Your hand auto-refills after each placement. Use taps strategically to keep key
+            cards available for matching solutions and twist counters.
         </p>
     </div>
 
     <div class="how-to-section">
-        <h3>Foundations</h3>
-        <p>Build four foundation piles to complete the restoration:</p>
-        <ul>
-            <li><strong>Tools Foundation</strong> — All tool cards.</li>
-            <li><strong>Solutions Foundation</strong> — All solution cards.</li>
-            <li><strong>Cleared Challenges</strong> — Automatically fills as you solve challenges.</li>
-            <li><strong>Impact Foundation</strong> — All impact cards.</li>
-        </ul>
+        <h3>Scoring and Progress</h3>
+        <p>Each completed run awards score by card type and adds restoration progress. Keep completing runs until the well reaches <strong>100%</strong>.</p>
     </div>
 
     <div class="how-to-section">
@@ -210,14 +198,12 @@
             To win, you must:
         </p>
         <ul>
-            <li>Clear all Challenges</li>
-            <li>Complete all four Foundations</li>
-            <li>Reveal the hidden Well Card</li>
-            <li>Place the final Solution on the Well Card</li>
+            <li>Complete pipeline runs consistently.</li>
+            <li>Clear incoming challenges with matching solutions.</li>
+            <li>Reach <strong>100% Well Restoration</strong>.</li>
         </ul>
         <p>
-            This triggers the celebration screen, confetti, water splash animation,
-            and your final impact report.
+            Reaching 100% triggers the celebration screen, confetti, and your final impact report.
         </p>
     </div>
 
@@ -230,108 +216,86 @@
      GAME SCREEN — Wellspring: Restore the Flow
      ================================================ -->
     <section id="game-screen" class="screen" aria-label="Game Screen">
-
-        <!-- Top bar: controls + stats -->
-        <header class="game-header" role="banner">
-            <div class="header-left">
-                <button id="pause-btn" class="btn btn-secondary btn-small" aria-label="Pause game">⏸ Pause</button>
+        <header class="pipeline-header" role="banner">
+            <div class="pipeline-controls">
+                <button id="reroute-btn" class="btn btn-secondary btn-small" aria-label="Refresh hand cards">↻ Reroute</button>
                 <button id="reset-btn" class="btn btn-secondary btn-small" aria-label="Restart game">↺ Reset</button>
-                <button id="menu-btn" class="btn btn-secondary btn-small" aria-label="Return to main menu">⬅
-                    Menu</button>
-                <label class="balance-control" for="balance-profile">
-                    <span class="balance-label">Pace</span>
-                    <select id="balance-profile" class="balance-select" aria-label="Game pace profile">
-                        <option value="quick">Quick</option>
-                        <option value="medium" selected>Medium</option>
-                        <option value="hard">Hard</option>
-                    </select>
-                </label>
+                <button id="menu-btn" class="btn btn-secondary btn-small" aria-label="Return to main menu">⬅ Menu</button>
             </div>
 
-            <div class="header-right">
-                <div class="stat-chip" id="timer-display" aria-live="polite">
-                    ⏱
-                    <div>
-                        <span class="label">Time</span>
-                        <span class="value" id="timer-value">0:00</span>
-                    </div>
+            <div class="pipeline-stats" aria-live="polite">
+                <div class="pipeline-stat-chip">
+                    <span class="label">Time</span>
+                    <span class="value" id="pipeline-timer-value">0:00</span>
                 </div>
-
-                <div class="stat-chip" id="best-time-display" aria-live="polite">
-                    🏁
-                    <div>
-                        <span class="label">Best</span>
-                        <span class="value" id="best-time-value">--:--</span>
-                    </div>
+                <div class="pipeline-stat-chip">
+                    <span class="label">Score</span>
+                    <span class="value" id="pipeline-score-value">0</span>
                 </div>
-
-                <div class="stat-chip">
-                    ⭐
-                    <div>
-                        <span class="label">Score</span>
-                        <span class="value" id="score-value">0</span>
-                    </div>
+                <div class="pipeline-stat-chip">
+                    <span class="label">Progress</span>
+                    <span class="value" id="pipeline-progress-value">0%</span>
                 </div>
-
-                <div class="multiplier-badge" id="multiplier-badge" aria-live="polite">2× Score!</div>
             </div>
         </header>
 
-        <!-- Progress bar -->
-        <div class="progress-section" role="status">
-            <div class="progress-label">
-                <span id="progress-label">Well 0% Restored</span>
-                <span>Restore to 100% to win!</span>
+        <div class="pipeline-progress-track" role="progressbar" aria-label="Pipeline restoration progress" aria-valuemin="0" aria-valuemax="100">
+            <div id="pipeline-progress-fill" class="pipeline-progress-fill"></div>
+        </div>
+
+        <div class="pipeline-layout">
+            <div id="pipeline-board" class="pipeline-board" role="group" aria-label="Pipeline slots">
+                <button class="pipeline-slot" data-slot="tool" aria-label="Tool slot" type="button">
+                    <span class="slot-label">Tool</span>
+                    <div class="slot-card-host"></div>
+                </button>
+                <button class="pipeline-slot" data-slot="challenge" aria-label="Challenge slot" type="button">
+                    <span class="slot-label">Challenge</span>
+                    <div class="slot-card-host"></div>
+                </button>
+                <button class="pipeline-slot" data-slot="solution" aria-label="Solution slot" type="button">
+                    <span class="slot-label">Solution</span>
+                    <div class="slot-card-host"></div>
+                </button>
+                <button class="pipeline-slot" data-slot="impact" aria-label="Impact slot" type="button">
+                    <span class="slot-label">Impact</span>
+                    <div class="slot-card-host"></div>
+                </button>
             </div>
-            <div class="progress-bar-track" role="progressbar" aria-label="Well restoration progress" aria-valuemin="0"
-                aria-valuemax="100">
-                <div class="progress-bar-fill" id="progress-fill"></div>
+
+            <div id="twist-layer" class="twist-layer" aria-live="polite"></div>
+            <div id="pipeline-hand-row" class="pipeline-hand-row" role="list" aria-label="Card hand"></div>
+        </div>
+
+        <div id="pipeline-toast" class="pipeline-toast" role="alert" aria-live="assertive"></div>
+
+        <aside id="pipeline-debug-hud" class="pipeline-debug-hud" aria-label="Pipeline debug HUD">
+            <div class="debug-hud-head">
+                <strong>Debug HUD</strong>
+                <button id="debug-toggle-btn" class="debug-btn" type="button" aria-label="Hide debug HUD">Hide</button>
             </div>
-        </div>
-
-        <!-- Booster bar -->
-        <div id="booster-bar" class="booster-bar">
-            <!-- Boosters will be injected here -->
-        </div>
-
-        <div class="board-layout">
-
-        <!-- Water Tanks (Free Cells) -->
-        <div id="water-tanks" class="tanks-row" role="group" aria-label="Water Tanks (Free Cells)">
-            <!-- JS will generate 4–6 tank slots -->
-        </div>
-
-        <!-- Tableau Columns -->
-        <div id="tableau" class="tableau" role="main" aria-label="Tableau Columns">
-            <!-- JS will generate 8 columns -->
-        </div>
-
-        </div>
-
-        <!-- Foundations -->
-        <div id="foundations" class="foundations" role="group" aria-label="Foundations">
-            <!-- JS will generate 4 foundation piles -->
-        </div>
-
-        <!-- Toast notification -->
-        <div id="toast" class="toast" role="alert" aria-live="assertive"></div>
-
-        <!-- Heatwave visual overlay -->
-        <div id="heatwave-overlay" class="heatwave-overlay" aria-hidden="true"></div>
+            <div class="debug-grid">
+                <div>Valid Moves: <span id="debug-valid-moves">0</span></div>
+                <div>Turns: <span id="debug-turns">0</span></div>
+                <div>Pipelines: <span id="debug-pipelines">0</span></div>
+                <div>Deadlocks: <span id="debug-deadlocks">0</span></div>
+                <div>Auto Draw Saves: <span id="debug-auto-draw-saves">0</span></div>
+                <div>Auto Reroutes: <span id="debug-auto-reroutes">0</span></div>
+                <div>Manual Reroutes: <span id="debug-manual-reroutes">0</span></div>
+                <div>Safety Injects: <span id="debug-safety-injects">0</span></div>
+                <div>Impacts Stolen: <span id="debug-impacts-stolen">0</span></div>
+                <div>Invalid Taps: <span id="debug-invalid-taps">0</span></div>
+                <div>Heatwaves: <span id="debug-heatwaves">0</span></div>
+                <div>Contamination: <span id="debug-contamination">0</span></div>
+                <div>Pipe Locks: <span id="debug-pipe-locks">0</span></div>
+                <div>Water Theft Twists: <span id="debug-water-thefts">0</span></div>
+            </div>
+            <div class="debug-actions">
+                <button id="debug-copy-btn" class="debug-btn" type="button">Copy JSON</button>
+                <button id="debug-download-btn" class="debug-btn" type="button">Download JSON</button>
+            </div>
+        </aside>
     </section>
-
-    <!-- ================================================
-       PAUSE OVERLAY
-       ================================================ -->
-    <div id="pause-overlay" class="pause-overlay" role="dialog" aria-modal="true" aria-label="Game paused">
-        <h2>⏸ Paused</h2>
-        <p style="color:rgba(255,255,255,0.7);margin-bottom:8px;">The timer is frozen.</p>
-        <div class="pause-buttons">
-            <button id="resume-btn" class="btn btn-primary">▶ Resume</button>
-            <button id="restart-btn" class="btn btn-secondary">↺ Restart Game</button>
-            <button id="pause-menu-btn" class="btn btn-secondary">⬅ Main Menu</button>
-        </div>
-    </div>
 
     <!-- ================================================
        WIN SCREEN
@@ -430,7 +394,7 @@
     </div>
 
     <script src="JS/game.js"></script>
-    <script type="module" src="JS/solitaire.js"></script>
+    <script type="module" src="JS/pipeline.js"></script>
 
 </body>
 

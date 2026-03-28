@@ -109,7 +109,7 @@ window.showScreen = showScreen;
 let isStartingGame = false;
 
 async function startSelectedMode() {
-  // Preferred runtime path: launch module-based solitaire mode.
+  // Preferred runtime path: launch module-based pipeline mode.
   // Falls back to local mode if module bootstrap fails.
   if (isStartingGame) return;
   isStartingGame = true;
@@ -118,12 +118,12 @@ async function startSelectedMode() {
   if (startBtn) startBtn.disabled = true;
 
   try {
-    if (typeof window.initSolitaireGame !== 'function') {
-      await import('./solitaire.js');
+    if (typeof window.initPipelineGame !== 'function') {
+      await import('./pipeline.js');
     }
 
-    if (typeof window.initSolitaireGame === 'function') {
-      window.initSolitaireGame();
+    if (typeof window.initPipelineGame === 'function') {
+      window.initPipelineGame();
       showScreen('game');
       return;
     }
@@ -755,36 +755,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Wire all top-level UI controls once DOM is ready.
-  // Preload solitaire module so first Start click is immediate.
-  import('./solitaire.js').catch(() => {
+  // Preload pipeline module so first Start click is immediate.
+  import('./pipeline.js').catch(() => {
     // No-op: startSelectedMode has fallback handling.
   });
-
-  const balanceSelect = $('balance-profile');
-  if (balanceSelect) {
-    try {
-      const savedProfile = localStorage.getItem('cw.balanceProfile');
-      if (savedProfile) balanceSelect.value = savedProfile;
-    } catch (_) {
-      // Ignore storage failures.
-    }
-
-    balanceSelect.addEventListener('change', async e => {
-      const profile = e.target.value;
-      if (typeof window.setBalanceProfile === 'function') {
-        window.setBalanceProfile(profile);
-        return;
-      }
-      try {
-        await import('./solitaire.js');
-        if (typeof window.setBalanceProfile === 'function') {
-          window.setBalanceProfile(profile);
-        }
-      } catch (_) {
-        // Ignore: selector will apply once module is available.
-      }
-    });
-  }
 
   // Title screen
   $('start-btn')?.addEventListener('click',    startSelectedMode);
@@ -822,7 +796,13 @@ document.addEventListener('DOMContentLoaded', () => {
   $('pause-btn')?.addEventListener('click',    pauseGame);
   $('skip-btn')?.addEventListener('click',     onSkip);
   $('reset-btn')?.addEventListener('click',    startSelectedMode);
-  $('menu-btn')?.addEventListener('click',     () => { clearInterval(state.timerInterval); showScreen('title'); });
+  $('menu-btn')?.addEventListener('click',     () => {
+    clearInterval(state.timerInterval);
+    if (typeof window.stopPipelineGame === 'function') {
+      window.stopPipelineGame();
+    }
+    showScreen('title');
+  });
 
   // Pause overlay
   $('resume-btn')?.addEventListener('click',   resumeGame);
@@ -834,7 +814,12 @@ document.addEventListener('DOMContentLoaded', () => {
   $('win-play-again-btn')?.addEventListener('click', startSelectedMode);
 
   // Impact screen
-  $('impact-menu-btn')?.addEventListener('click',      () => showScreen('title'));
+  $('impact-menu-btn')?.addEventListener('click',      () => {
+    if (typeof window.stopPipelineGame === 'function') {
+      window.stopPipelineGame();
+    }
+    showScreen('title');
+  });
   $('impact-play-again-btn')?.addEventListener('click', startSelectedMode);
 
   // Title: spawn background droplets
