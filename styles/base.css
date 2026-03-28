@@ -11,8 +11,10 @@
 
   Breakpoint strategy:
   - Base = phone-first defaults
-  - min-width: 601px = tablet adjustments
-  - min-width: 901px = desktop adjustments
+  - min-width: 600px = tablet adjustments
+  - min-width: 900px = desktop adjustments
+  - max-width: 520px = compact phone overrides
+  - max-height: 620px = short viewport overrides
 */
 
 /* Tokens */
@@ -24,6 +26,10 @@
   --space-5: 24px;
   --radius-md: 12px;
   --radius-lg: 16px;
+  --safe-top: env(safe-area-inset-top);
+  --safe-right: env(safe-area-inset-right);
+  --safe-bottom: env(safe-area-inset-bottom);
+  --safe-left: env(safe-area-inset-left);
 }
 
 /* Orientation Warning Overlay */
@@ -110,10 +116,15 @@ body {
   align-items: center;
   justify-content: center;
   text-align: center;
-  min-height: 100vh;
+  min-height: var(--app-vh, 100dvh);
   background: radial-gradient(ellipse at 50% 60%, #0d4a6b 0%, #0A2E3D 70%);
   overflow: hidden;
   position: relative;
+  padding:
+    max(16px, var(--safe-top))
+    max(12px, var(--safe-right))
+    max(16px, var(--safe-bottom))
+    max(12px, var(--safe-left));
 }
 
 .ripple-container {
@@ -244,6 +255,10 @@ h1 span { color: var(--yellow); }
   margin-top: 14px;
   position: relative;
   z-index: 31;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
 .btn {
@@ -254,11 +269,28 @@ h1 span { color: var(--yellow); }
 /* Footer Link */
 .screen-footer {
   position: absolute;
-  bottom: 12px;
+  bottom: max(12px, var(--safe-bottom));
   left: 0;
   right: 0;
   text-align: center;
   z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.charity-footer-bar {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px;
+  margin-top: auto;
+  background: rgba(0, 0, 0, 0.22);
+  border-top: 1px solid rgba(255,255,255,0.12);
 }
 
 .charity-water-link {
@@ -278,7 +310,7 @@ h1 span { color: var(--yellow); }
 }
 
 /* Tablet Up */
-@media (min-width: 601px) {
+@media (min-width: 600px) {
   body {
     font-size: 15px;
   }
@@ -296,7 +328,7 @@ h1 span { color: var(--yellow); }
 }
 
 /* Desktop Up */
-@media (min-width: 901px) {
+@media (min-width: 900px) {
   body {
     font-size: 16px;
   }
@@ -310,5 +342,87 @@ h1 span { color: var(--yellow); }
 
   .title-buttons {
     max-width: 300px;
+  }
+}
+
+@media (max-width: 520px) {
+  .portrait-warning-content {
+    padding: 20px;
+    gap: 14px;
+  }
+
+  .portrait-warning-content h2 {
+    font-size: 1.55rem;
+  }
+
+  .portrait-warning-content p {
+    font-size: 0.92rem;
+  }
+
+  .rotation-arrow {
+    font-size: 2.2rem;
+  }
+
+  .title-content {
+    width: min(100%, 440px);
+    padding: var(--space-3) var(--space-1);
+  }
+
+  .charity-footer-bar {
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .charity-footer-bar .charity-water-link {
+    width: 100%;
+  }
+
+  .tagline {
+    font-size: 0.88rem;
+    margin-bottom: 16px;
+  }
+
+  .title-buttons .btn {
+    width: 100%;
+  }
+}
+
+@media (max-height: 620px) {
+  #title-screen {
+    justify-content: flex-start;
+    padding-top: max(10px, var(--safe-top));
+  }
+
+  .title-content {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .title-logo {
+    height: clamp(54px, 11vh, 82px);
+  }
+
+  h1 {
+    margin-bottom: 6px;
+    font-size: clamp(1.4rem, 7.5vw, 1.95rem);
+  }
+
+  .tagline {
+    margin-bottom: 10px;
+    line-height: 1.35;
+  }
+
+  .title-buttons {
+    gap: 8px;
+  }
+
+  .title-buttons .btn {
+    min-height: 36px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+  }
+
+  .title-link-wrap {
+    margin-top: 8px;
   }
 }

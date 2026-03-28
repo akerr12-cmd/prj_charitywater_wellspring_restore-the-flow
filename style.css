@@ -8,6 +8,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
+  --brand-font: 'Montserrat', 'Avenir Next', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --yellow:    #FFC907;
   --dark-blue: #0A2E3D;
   --blue:      #1E88C4;
@@ -25,7 +26,7 @@
 
 html, body {
   height: 100%;
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: var(--brand-font);
   background: var(--dark-blue);
   color: var(--white);
   overflow-x: hidden;
@@ -812,27 +813,9 @@ html, body {
 /* =============================================
    RESPONSIVE
    ============================================= */
-@media (max-width: 520px) {
-  .card-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    padding: 12px;
-  }
-  .card {
-    min-height: 0;
-    aspect-ratio: 9/16;
-  }
-  .card-emoji { font-size: 1.6rem; }
-  .card-name  { font-size: 0.6rem; }
-  .game-header { gap: 8px; }
-  .stat-chip  { padding: 5px 8px; }
-  .stats-grid { grid-template-columns: 1fr 1fr; }
-}
-
-@media (max-width: 360px) {
-  .card-grid { gap: 5px; padding: 8px; }
-  .card-emoji { font-size: 1.3rem; }
-}
+/* Legacy responsive overrides were removed to avoid cascade overlap.
+   Responsive behavior is owned by split mobile-first layers:
+   styles/base.css, styles/pipeline.css, styles/modal.css, styles/end-screens.css. */
 
 /* Gameplay responsiveness is handled by #game-screen scoped rules. */
 

@@ -4,6 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, orientation=landscape">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
     <meta name="description"
         content="Wellspring: Restore the Flow — Strategic card challenges inspired by clean‑water impact. Fix what's broken. Restore what matters. Inspired by Charity: Water.">
     <title>Wellspring: Restore the Flow | Charity: Water</title>
@@ -61,6 +64,9 @@
             <div class="title-link-wrap">
                 <a href="https://www.charitywater.org/uk/main" target="_blank" rel="noopener noreferrer" class="charity-water-link">
                     Learn more at charity: water
+                </a>
+                <a href="https://www.charitywater.org/donate" target="_blank" rel="noopener noreferrer" class="charity-water-link">
+                    Donate to fund clean water projects
                 </a>
             </div>
         </div>
@@ -221,6 +227,14 @@
                 <button id="reroute-btn" class="btn btn-secondary btn-small" aria-label="Refresh hand cards">↻ Reroute</button>
                 <button id="reset-btn" class="btn btn-secondary btn-small" aria-label="Restart game">↺ Reset</button>
                 <button id="menu-btn" class="btn btn-secondary btn-small" aria-label="Return to main menu">⬅ Menu</button>
+                <label class="difficulty-control" for="difficulty-mode">
+                    <span>Difficulty</span>
+                    <select id="difficulty-mode" aria-label="Select difficulty mode">
+                        <option value="easy">Easy</option>
+                        <option value="normal" selected>Normal</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </label>
             </div>
 
             <div class="pipeline-stats" aria-live="polite">
@@ -268,6 +282,11 @@
         </div>
 
         <div id="pipeline-toast" class="pipeline-toast" role="alert" aria-live="assertive"></div>
+
+        <footer class="charity-footer-bar" aria-label="Charity links">
+            <a href="https://www.charitywater.org/uk/main" target="_blank" rel="noopener noreferrer" class="charity-water-link">charity: water site</a>
+            <a href="https://www.charitywater.org/donate" target="_blank" rel="noopener noreferrer" class="charity-water-link">Donate now</a>
+        </footer>
 
         <!--
         <aside id="pipeline-debug-hud" class="pipeline-debug-hud" aria-label="Pipeline debug HUD">
@@ -323,6 +342,11 @@
                 <button id="win-play-again-btn" class="btn btn-secondary">↺ Play Again</button>
             </div>
         </div>
+
+        <footer class="charity-footer-bar" aria-label="Charity links">
+            <a href="https://www.charitywater.org/uk/main" target="_blank" rel="noopener noreferrer" class="charity-water-link">charity: water site</a>
+            <a href="https://www.charitywater.org/donate" target="_blank" rel="noopener noreferrer" class="charity-water-link">Donate now</a>
+        </footer>
     </section>
 
     <!-- ================================================
@@ -381,6 +405,9 @@
         <footer class="screen-footer">
             <a href="https://www.charitywater.org/uk/main" target="_blank" rel="noopener noreferrer" class="charity-water-link">
                 Learn more at charity: water
+            </a>
+            <a href="https://www.charitywater.org/donate" target="_blank" rel="noopener noreferrer" class="charity-water-link">
+                Donate to charity: water
             </a>
         </footer>
     </section>

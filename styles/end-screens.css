@@ -9,7 +9,9 @@
 
   Breakpoint strategy:
   - Base = stacked, mobile-readable stats presentation
-  - min-width: 601px = two-column stats grid
+  - max-width: 520px = compact phone overrides
+  - max-height: 620px = short viewport overrides
+  - min-width: 600px = two-column stats grid
 */
 
 /* Win Screen */
@@ -17,10 +19,15 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  min-height: 100vh;
+  min-height: var(--app-vh, 100dvh);
   background: radial-gradient(ellipse at 50% 40%, #0d5e40 0%, #052d1e 60%, #041a13 100%);
   overflow: hidden;
   position: relative;
+  padding:
+    max(16px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
 }
 
 .confetti-canvas {
@@ -32,8 +39,9 @@
 .win-content {
   position: relative;
   z-index: 1;
-  padding: 40px 20px;
-  max-width: 480px;
+  width: min(94vw, 520px);
+  padding: 24px 16px;
+  max-width: 520px;
 }
 
 .win-icon {
@@ -63,7 +71,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 200px;
+  height: clamp(90px, 20vh, 200px);
   overflow: hidden;
   pointer-events: none;
 }
@@ -95,14 +103,18 @@
 #impact-screen {
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: var(--app-vh, 100dvh);
   background: linear-gradient(160deg, #0A2E3D 0%, #071e29 100%);
-  padding: 30px 20px;
+  padding:
+    max(20px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
 }
 
 .impact-content {
-  max-width: 500px;
-  width: 100%;
+  max-width: 640px;
+  width: min(96vw, 640px);
   text-align: center;
 }
 
@@ -176,8 +188,80 @@
 
 .impact-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
+@media (max-width: 520px) {
+  .win-content {
+    padding: 16px 8px;
+  }
+
+  .win-icon {
+    font-size: 2.8rem;
+    margin-bottom: 10px;
+  }
+
+  .win-subtitle {
+    font-size: 0.86rem;
+    margin-bottom: 14px;
+    line-height: 1.4;
+  }
+
+  .win-buttons .btn,
+  .impact-buttons .btn {
+    width: 100%;
+  }
+
+  .impact-subhead {
+    font-size: 0.84rem;
+    margin-bottom: 14px;
+  }
+
+  .stat-number {
+    font-size: 1.6rem;
+  }
+
+  .impact-story {
+    font-size: 0.82rem;
+    line-height: 1.52;
+    padding: 10px;
+  }
+}
+
+@media (max-height: 620px) {
+  #win-screen,
+  #impact-screen {
+    justify-content: flex-start;
+    overflow-y: auto;
+  }
+
+  .win-content,
+  .impact-content {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .win-title {
+    font-size: clamp(1.2rem, 6vw, 1.65rem);
+  }
+
+  .win-subtitle {
+    margin-bottom: 12px;
+  }
+
+  .stats-grid {
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .stat-card {
+    padding: 10px;
+  }
+
+  .impact-story {
+    margin-bottom: 10px;
+  }
+}
+
 /* Tablet Up */
-@media (min-width: 601px) {
+@media (min-width: 600px) {
   .stats-grid {
     grid-template-columns: 1fr 1fr;
   }

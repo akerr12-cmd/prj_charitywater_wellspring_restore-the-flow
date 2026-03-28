@@ -2,26 +2,80 @@ import { FULL_DECK } from './deck.js';
 
 'use strict';
 
-const STARTING_HAND = 5;
-const HAND_REFILL_TARGET = 5;
-const MAX_HAND_SIZE = 7;
-const SOLUTION_LOCK_SECS = 5;
-const AUTO_UNSTUCK_DRAW_COUNT = 2;
+const DEFAULT_DIFFICULTY = 'normal';
+const DIFFICULTY_PROFILES = {
+  easy: {
+    id: 'easy',
+    label: 'Easy',
+    winTargetProgress: 84,
+    startHand: 6,
+    handRefillTarget: 6,
+    maxHandSize: 9,
+    lockSecs: 2,
+    autoUnstuckDrawCount: 4,
+    progressPerPipeline: 15,
+    timeLimitSeconds: 0,
+    streakBonusStep: 32,
+    streakBonusCap: 300,
+    deadlockAssistProgress: 3,
+    invalidTapPenalty: 0,
+    manualReroutePenalty: 0,
+    scoreValues: { tool: 95, challenge: 155, solution: 205, impact: 305 },
+  },
+  normal: {
+    id: 'normal',
+    label: 'Normal',
+    winTargetProgress: 100,
+    startHand: 5,
+    handRefillTarget: 5,
+    maxHandSize: 7,
+    lockSecs: 5,
+    autoUnstuckDrawCount: 2,
+    progressPerPipeline: 10,
+    timeLimitSeconds: 420,
+    streakBonusStep: 24,
+    streakBonusCap: 220,
+    deadlockAssistProgress: 1,
+    invalidTapPenalty: 5,
+    manualReroutePenalty: 8,
+    scoreValues: { tool: 80, challenge: 130, solution: 180, impact: 260 },
+  },
+  hard: {
+    id: 'hard',
+    label: 'Hard',
+    winTargetProgress: 108,
+    startHand: 4,
+    handRefillTarget: 4,
+    maxHandSize: 6,
+    lockSecs: 7,
+    autoUnstuckDrawCount: 1,
+    progressPerPipeline: 8,
+    timeLimitSeconds: 330,
+    streakBonusStep: 20,
+    streakBonusCap: 180,
+    deadlockAssistProgress: 0,
+    invalidTapPenalty: 12,
+    manualReroutePenalty: 20,
+    scoreValues: { tool: 75, challenge: 125, solution: 175, impact: 255 },
+  },
+};
+
+const MILESTONES = [
+  { score: 500, message: 'Milestone: 500 points - The first village sees clean water.' },
+  { score: 1200, message: 'Milestone: 1,200 points - Multiple neighborhoods restored.' },
+  { score: 2200, message: 'Milestone: 2,200 points - Regional impact accelerating.' },
+  { score: 3500, message: 'Milestone: 3,500 points - Mission momentum is unstoppable.' },
+];
+
 const DEBUG_EVENT_LOG_LIMIT = 240;
 
 const SLOT_ORDER = ['tool', 'challenge', 'solution', 'impact'];
 
-const SCORE_VALUES = {
-  tool: 80,
-  challenge: 130,
-  solution: 180,
-  impact: 260,
-};
-
-const PROGRESS_PER_PIPELINE = 10;
+const DEFAULT_SCORE_VALUES = { tool: 80, challenge: 130, solution: 180, impact: 260 };
 const PEOPLE_PER_PIPELINE = 55;
 
 let P = freshPipelineState();
+let D = DIFFICULTY_PROFILES[DEFAULT_DIFFICULTY];
 let debugHudBound = false;
 
 function freshPipelineState() {
@@ -51,6 +105,9 @@ function freshPipelineState() {
     deadlockRecoveryCount: 0,
     stealNextImpact: false,
     gameOver: false,
+    outcome: 'in-progress',
+    difficulty: DEFAULT_DIFFICULTY,
+    milestoneHits: new Set(),
     telemetry: {
       turns: 0,
       pipelinesCompleted: 0,
@@ -69,6 +126,43 @@ function freshPipelineState() {
     },
     debugEvents: [],
   };
+}
+
+function getDifficultyProfile(id) {
+  return DIFFICULTY_PROFILES[id] || DIFFICULTY_PROFILES[DEFAULT_DIFFICULTY];
+}
+
+function getSelectedDifficultyFromUI() {
+  const select = $('difficulty-mode');
+  if (!select) return DEFAULT_DIFFICULTY;
+  return select.value || DEFAULT_DIFFICULTY;
+}
+
+function syncDifficultySelect(value) {
+  const select = $('difficulty-mode');
+  if (select) {
+    select.value = value;
+  }
+}
+
+function loadSavedDifficulty() {
+  try {
+    const saved = localStorage.getItem('cw.pipelineDifficulty');
+    if (saved && DIFFICULTY_PROFILES[saved]) {
+      return saved;
+    }
+  } catch (_) {
+    // Ignore storage access failures.
+  }
+  return DEFAULT_DIFFICULTY;
+}
+
+function saveDifficulty(value) {
+  try {
+    localStorage.setItem('cw.pipelineDifficulty', value);
+  } catch (_) {
+    // Ignore storage access failures.
+  }
 }
 
 function $(id) {
@@ -97,11 +191,20 @@ function setupDecks() {
 }
 
 export function initPipelineGame() {
+  const select = $('difficulty-mode');
+  const savedDifficulty = loadSavedDifficulty();
+  const shouldUseSaved = select && !select.dataset.boundDifficulty;
+  const selectedDifficulty = shouldUseSaved ? savedDifficulty : getSelectedDifficultyFromUI();
+  D = getDifficultyProfile(selectedDifficulty);
+  syncDifficultySelect(D.id);
+  saveDifficulty(D.id);
+
   stopPipelineGame();
   P = freshPipelineState();
+  P.difficulty = D.id;
 
   setupDecks();
-  drawCards(STARTING_HAND);
+  drawCards(D.startHand);
   spawnNextChallenge();
   bindPipelineInteractions();
   startTimer();
@@ -111,8 +214,19 @@ export function initPipelineGame() {
   bindDebugHudControls();
   updateHud();
   checkForDeadlock();
-  recordDebugEvent('game_start', { handSize: P.hand.length });
-  showToast('Build the pipeline: Tool -> Challenge -> Solution -> Impact');
+  recordDebugEvent('game_start', { handSize: P.hand.length, difficulty: D.id });
+  showToast(buildDifficultyIntroMessage());
+}
+
+function buildDifficultyIntroMessage() {
+  const target = D.winTargetProgress;
+  if (D.timeLimitSeconds <= 0) {
+    return `${D.label} mode: reach ${target} points. Hand ${D.handRefillTarget}, lock ${D.lockSecs}s, no timer.`;
+  }
+
+  const mins = Math.floor(D.timeLimitSeconds / 60);
+  const secs = D.timeLimitSeconds % 60;
+  return `${D.label} mode: reach ${target} points in ${mins}:${String(secs).padStart(2, '0')}. Hand ${D.handRefillTarget}, lock ${D.lockSecs}s.`;
 }
 
 export function stopPipelineGame() {
@@ -130,6 +244,12 @@ function startTimer() {
   P.timerInterval = setInterval(() => {
     if (P.gameOver) return;
     P.elapsedSeconds += P.timerRate;
+
+    if (D.timeLimitSeconds > 0 && P.elapsedSeconds >= D.timeLimitSeconds) {
+      triggerLoss('Time limit reached for selected difficulty.');
+      return;
+    }
+
     updateHud();
     updateSlotHighlights();
   }, 1000);
@@ -154,6 +274,21 @@ function bindPipelineInteractions() {
     rerouteBtn.onclick = () => {
       rerouteHand(false);
     };
+  }
+
+  const difficultySelect = $('difficulty-mode');
+  if (difficultySelect && !difficultySelect.dataset.boundDifficulty) {
+    difficultySelect.dataset.boundDifficulty = 'true';
+    difficultySelect.value = D.id;
+    difficultySelect.addEventListener('change', () => {
+      const selected = getDifficultyProfile(difficultySelect.value);
+      D = selected;
+      saveDifficulty(selected.id);
+      if (window.gameAudio?.playSfx) {
+        window.gameAudio.playSfx('click');
+      }
+      initPipelineGame();
+    });
   }
 }
 
@@ -212,7 +347,15 @@ function onSlotTap(slot) {
   if (!canPlaceCard(slot, card)) {
     P.telemetry.invalidSlotTaps += 1;
     recordDebugEvent('invalid_slot_tap', { slot, cardType: card.type, cardName: card.name });
+
+    const invalidPenalty = Math.max(0, D.invalidTapPenalty || 0);
+    if (invalidPenalty > 0) {
+      P.score = Math.max(0, P.score - invalidPenalty);
+      updateHud();
+    }
+
     showToast('That card cannot be placed in this slot right now.');
+    window.gameAudio?.playSfx?.('invalid');
     animateSlotPulse(slot, 'bad');
     updateDebugHud();
     return;
@@ -232,6 +375,7 @@ function onSlotTap(slot) {
       renderHand();
       updateSlotHighlights();
       showTwistBanner('Water Theft! Impact card was stolen.');
+      window.gameAudio?.playSfx?.('miss');
       animateSlotPulse('impact', 'bad');
       refillHand();
       checkForDeadlock();
@@ -242,6 +386,7 @@ function onSlotTap(slot) {
 
   P.telemetry.turns += 1;
   recordDebugEvent('card_placed', { slot, cardType: card.type, cardName: card.name });
+  window.gameAudio?.playSfx?.('place');
 
   P.pipeline[slot] = card;
   animateSlotPulse(slot, 'good');
@@ -334,14 +479,16 @@ function resolvePipelineCompletion() {
 
   const earned = SLOT_ORDER.reduce((sum, slot) => {
     const type = P.pipeline[slot]?.type;
-    return sum + (SCORE_VALUES[type] || 0);
+    return sum + (D.scoreValues[type] || DEFAULT_SCORE_VALUES[type] || 0);
   }, 0);
 
   P.streak += 1;
-  const streakBonus = Math.min(250, P.streak * 25);
+  const streakStep = D.streakBonusStep || 25;
+  const streakCap = D.streakBonusCap || 250;
+  const streakBonus = Math.min(streakCap, P.streak * streakStep);
 
   P.score += (earned + streakBonus);
-  P.progress = Math.min(100, P.progress + PROGRESS_PER_PIPELINE);
+  P.progress += D.progressPerPipeline;
   P.people += PEOPLE_PER_PIPELINE;
   P.challenges += 1;
   P.telemetry.pipelinesCompleted += 1;
@@ -352,6 +499,7 @@ function resolvePipelineCompletion() {
   });
 
   showToast(`Pipeline complete! +${earned + streakBonus} score (streak +${streakBonus}).`);
+  checkMilestones();
   pulseBoard();
 
   if (P.pipeline.tool) P.discardPile.push(P.pipeline.tool);
@@ -366,7 +514,7 @@ function resolvePipelineCompletion() {
   updateHud();
   renderPipeline();
 
-  if (P.progress >= 100) {
+  if (P.progress >= D.winTargetProgress) {
     triggerWin();
     return;
   }
@@ -377,8 +525,8 @@ function resolvePipelineCompletion() {
 }
 
 function refillHand() {
-  if (P.hand.length >= HAND_REFILL_TARGET) return;
-  drawCards(HAND_REFILL_TARGET - P.hand.length);
+  if (P.hand.length >= D.handRefillTarget) return;
+  drawCards(D.handRefillTarget - P.hand.length);
 }
 
 function renderPipeline() {
@@ -425,13 +573,28 @@ function buildCardEl(card) {
   el.className = 'pipeline-card';
   el.dataset.type = card.type;
 
+  const detailText = buildCardDetailText(card);
+
   el.innerHTML = `
-    <span class="card-type">${card.type}</span>
+    <div class="card-head">
+      <span class="card-type">${card.type}</span>
+      <span class="card-id">#${card.id}</span>
+    </div>
     <span class="card-emoji" aria-hidden="true">${card.emoji}</span>
     <span class="card-name">${card.name}</span>
+    <span class="card-description">${detailText}</span>
   `;
 
   return el;
+}
+
+function buildCardDetailText(card) {
+  const text = String(card?.description || '').trim();
+  if (!text) {
+    return 'Mission card used to restore clean water access.';
+  }
+
+  return text.length > 88 ? `${text.slice(0, 85)}...` : text;
 }
 
 function updateHud() {
@@ -443,12 +606,20 @@ function updateHud() {
   if (timerEl) {
     const mins = Math.floor(P.elapsedSeconds / 60);
     const secs = P.elapsedSeconds % 60;
-    timerEl.textContent = `${mins}:${String(secs).padStart(2, '0')}`;
+    const timeLabel = `${mins}:${String(secs).padStart(2, '0')}`;
+    if (D.timeLimitSeconds > 0) {
+      const limitMins = Math.floor(D.timeLimitSeconds / 60);
+      const limitSecs = D.timeLimitSeconds % 60;
+      timerEl.textContent = `${timeLabel} / ${limitMins}:${String(limitSecs).padStart(2, '0')}`;
+    } else {
+      timerEl.textContent = timeLabel;
+    }
   }
 
   if (scoreEl) scoreEl.textContent = P.score.toLocaleString();
-  if (progressEl) progressEl.textContent = `${Math.round(P.progress)}%`;
-  if (progressFill) progressFill.style.width = `${Math.round(P.progress)}%`;
+  const completionPct = Math.min(100, Math.round((P.progress / D.winTargetProgress) * 100));
+  if (progressEl) progressEl.textContent = `${completionPct}%`;
+  if (progressFill) progressFill.style.width = `${completionPct}%`;
 
   updateDebugHud();
 }
@@ -501,7 +672,7 @@ function applyChallengeTwist(challengeCard) {
 
   if (challengeCard.twist === 'pipe_lock') {
     twistPipeLock();
-    showTwistBanner(`Pipe Lock! Solution slot locked for ${SOLUTION_LOCK_SECS}s.`);
+    showTwistBanner(`Pipe Lock! Solution slot locked for ${D.lockSecs}s.`);
     return;
   }
 
@@ -541,7 +712,7 @@ function twistPipeLock() {
   if (P.lockedSlots.has(slot)) return;
 
   P.lockedSlots.add(slot);
-  P.lockedUntil.set(slot, Date.now() + (SOLUTION_LOCK_SECS * 1000));
+  P.lockedUntil.set(slot, Date.now() + (D.lockSecs * 1000));
   updateSlotHighlights();
 
   const timerId = setTimeout(() => {
@@ -550,7 +721,7 @@ function twistPipeLock() {
     P.lockTimers.delete(slot);
     updateSlotHighlights();
     showToast('Solution slot unlocked.');
-  }, SOLUTION_LOCK_SECS * 1000);
+  }, D.lockSecs * 1000);
 
   P.lockTimers.set(slot, timerId);
 }
@@ -593,7 +764,9 @@ function animateSlotPulse(slot, type) {
 
 function triggerWin() {
   P.gameOver = true;
+  P.outcome = 'win';
   stopPipelineGame();
+  window.gameAudio?.playSfx?.('win');
 
   if (typeof window.showScreen === 'function') {
     window.showScreen('win');
@@ -601,6 +774,28 @@ function triggerWin() {
   if (typeof window.startConfetti === 'function') {
     window.startConfetti();
   }
+}
+
+function triggerLoss(reason) {
+  if (P.gameOver) return;
+
+  P.gameOver = true;
+  P.outcome = 'loss';
+  stopPipelineGame();
+  recordDebugEvent('mission_failed', { reason, elapsedSeconds: P.elapsedSeconds, score: P.score });
+  window.gameAudio?.playSfx?.('miss');
+
+  showTwistBanner(`Mission failed: ${reason}`);
+  showToast('Mission failed. Review your impact report and try again.');
+
+  setTimeout(() => {
+    if (typeof window.populateImpactScreen === 'function') {
+      window.populateImpactScreen();
+    }
+    if (typeof window.showScreen === 'function') {
+      window.showScreen('impact');
+    }
+  }, 750);
 }
 
 function hasAnyValidMove() {
@@ -629,10 +824,17 @@ function checkForDeadlock() {
 function recoverFromDeadlock() {
   P.deadlockRecoveryCount += 1;
 
+  const assistProgress = Math.max(0, D.deadlockAssistProgress || 0);
+  if (assistProgress > 0) {
+    P.progress += assistProgress;
+    recordDebugEvent('deadlock_progress_assist', { progressAssist: assistProgress, progress: P.progress });
+    updateHud();
+  }
+
   // Try lightweight recovery first: expand the hand briefly.
   const before = P.hand.length;
-  for (let i = 0; i < AUTO_UNSTUCK_DRAW_COUNT; i++) {
-    if (P.hand.length >= MAX_HAND_SIZE) break;
+  for (let i = 0; i < D.autoUnstuckDrawCount; i++) {
+    if (P.hand.length >= D.maxHandSize) break;
     drawCards(1);
     if (hasAnyValidMove()) {
       P.telemetry.autoDrawSaves += 1;
@@ -661,7 +863,7 @@ function rerouteHand(autoTriggered) {
   P.hand = [];
   P.selectedHandIndex = -1;
 
-  drawCards(HAND_REFILL_TARGET);
+  drawCards(D.handRefillTarget);
   updateSlotHighlights();
 
   if (autoTriggered) {
@@ -670,6 +872,12 @@ function rerouteHand(autoTriggered) {
   } else {
     P.telemetry.manualReroutes += 1;
     recordDebugEvent('reroute_manual', { handSize: P.hand.length });
+
+    const reroutePenalty = Math.max(0, D.manualReroutePenalty || 0);
+    if (reroutePenalty > 0) {
+      P.score = Math.max(0, P.score - reroutePenalty);
+      updateHud();
+    }
   }
 
   if (autoTriggered) {
@@ -677,6 +885,18 @@ function rerouteHand(autoTriggered) {
   } else {
     showToast('Hand rerouted. New cards are ready.');
   }
+}
+
+function checkMilestones() {
+  MILESTONES.forEach(milestone => {
+    if (P.score >= milestone.score && !P.milestoneHits.has(milestone.score)) {
+      P.milestoneHits.add(milestone.score);
+      showToast(milestone.message);
+      showTwistBanner(milestone.message);
+      window.gameAudio?.playSfx?.('milestone');
+      recordDebugEvent('score_milestone', { score: milestone.score, message: milestone.message });
+    }
+  });
 }
 
 function injectSafetyCard() {
@@ -795,6 +1015,9 @@ function recordDebugEvent(type, details = {}) {
 
 function getDebugSnapshot() {
   return {
+    difficulty: D.id,
+    winTargetProgress: D.winTargetProgress,
+    timeLimitSeconds: D.timeLimitSeconds,
     elapsedSeconds: P.elapsedSeconds,
     score: P.score,
     progress: P.progress,
@@ -812,12 +1035,17 @@ function getDebugSnapshot() {
 function getPipelineRunStats() {
   const mins = Math.floor(P.elapsedSeconds / 60);
   const secs = P.elapsedSeconds % 60;
+  const completionPct = Math.min(100, Math.round((P.progress / D.winTargetProgress) * 100));
 
   return {
     score: P.score,
     challenges: P.challenges,
     people: P.people,
-    progress: P.progress,
+    progress: completionPct,
+    progressPoints: P.progress,
+    winTargetProgress: D.winTargetProgress,
+    difficulty: D.id,
+    outcome: P.outcome,
     timeLabel: `${mins}:${String(secs).padStart(2, '0')}`,
   };
 }

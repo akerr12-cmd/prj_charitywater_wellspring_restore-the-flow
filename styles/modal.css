@@ -10,7 +10,9 @@
 
   Breakpoint strategy:
   - Base = compact, readable mobile modal
-  - min-width: 901px = larger desktop panel padding
+  - max-width: 520px = compact phone modal overrides
+  - max-height: 620px = short viewport modal compression
+  - min-width: 900px = larger desktop panel padding
 */
 
 /* Overlay */
@@ -22,7 +24,11 @@
   z-index: 100;
   align-items: center;
   justify-content: center;
-  padding: var(--space-2);
+  padding:
+    max(var(--space-2), env(safe-area-inset-top))
+    max(var(--space-2), env(safe-area-inset-right))
+    max(var(--space-2), env(safe-area-inset-bottom))
+    max(var(--space-2), env(safe-area-inset-left));
 }
 
 .modal-overlay.open { display: flex; }
@@ -34,7 +40,7 @@
   padding: 22px 18px;
   max-width: 560px;
   width: 100%;
-  max-height: calc(var(--app-vh, 100dvh) - 22px);
+  max-height: calc(var(--app-vh, 100dvh) - max(22px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
   overflow-y: auto;
   box-shadow: 0 8px 40px rgba(0,0,0,0.5);
   position: relative;
@@ -113,8 +119,69 @@
 .badge-solution  { background: var(--solution-color);  color: #fff; }
 .badge-impact    { background: var(--impact-color);    color: var(--dark-blue); }
 
+@media (max-width: 520px) {
+  .modal {
+    padding: 18px 14px;
+    border-radius: 12px;
+  }
+
+  .modal h2 {
+    font-size: 1.1rem;
+    margin-bottom: 14px;
+    padding-right: 34px;
+  }
+
+  .modal-close {
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .how-to-section {
+    margin-bottom: 16px;
+  }
+
+  .how-to-section p,
+  .how-to-section li {
+    font-size: 0.84rem;
+    line-height: 1.45;
+  }
+
+  .card-type-item {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .card-type-badge {
+    font-size: 0.66rem;
+    padding: 3px 8px;
+  }
+}
+
+@media (max-height: 620px) {
+  .modal-overlay {
+    align-items: flex-start;
+  }
+
+  .modal {
+    margin-top: 4px;
+    padding: 14px 14px;
+    max-height: calc(var(--app-vh, 100dvh) - max(12px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
+  }
+
+  .modal h2 {
+    margin-bottom: 10px;
+  }
+
+  .how-to-section {
+    margin-bottom: 12px;
+  }
+}
+
 /* Desktop Up */
-@media (min-width: 901px) {
+@media (min-width: 900px) {
   .modal {
     padding: 32px 28px;
   }

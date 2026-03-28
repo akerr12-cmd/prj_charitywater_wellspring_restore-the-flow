@@ -94,6 +94,9 @@ const screens = {
   impact: $('impact-screen'),
 };
 
+const gameAudio = createAudioManager();
+window.gameAudio = gameAudio;
+
 // =============================================
 // SCREEN MANAGEMENT
 // =============================================
@@ -101,6 +104,7 @@ const screens = {
 function showScreen(name) {
   Object.values(screens).forEach(s => s.classList.remove('active'));
   if (screens[name]) screens[name].classList.add('active');
+  gameAudio.setScreenMusic(name);
 }
 
 // Expose for module-to-module coordination (solitaire engine win flow).
@@ -549,6 +553,8 @@ function setText(id, val) {
   if (el) el.textContent = val;
 }
 
+window.populateImpactScreen = populateImpactScreen;
+
 // =============================================
 // UI UPDATES
 // =============================================
@@ -668,6 +674,169 @@ function startConfetti() {
 // Expose for module-to-module coordination (solitaire engine win flow).
 window.startConfetti = startConfetti;
 
+function createAudioManager() {
+  let ctx = null;
+  let bgNodes = [];
+  let currentScreen = null;
+  let unlocked = false;
+
+  function ensureContext() {
+    if (ctx) return ctx;
+
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+
+    ctx = new AudioCtx();
+    return ctx;
+  }
+
+  function unlock() {
+    const audioCtx = ensureContext();
+    if (!audioCtx) return;
+
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {
+        // Ignore resume failures in restricted environments.
+      });
+    }
+
+    unlocked = true;
+    if (currentScreen) {
+      setScreenMusic(currentScreen);
+    }
+  }
+
+  function stopBackground() {
+    bgNodes.forEach(node => {
+      try {
+        node.stop?.();
+      } catch (_) {
+        // Ignore already-stopped nodes.
+      }
+      try {
+        node.disconnect?.();
+      } catch (_) {
+        // Ignore disconnect errors.
+      }
+    });
+    bgNodes = [];
+  }
+
+  function startBackground(profile) {
+    const audioCtx = ensureContext();
+    if (!audioCtx || !unlocked) return;
+
+    stopBackground();
+
+    const gain = audioCtx.createGain();
+    gain.gain.value = profile.volume;
+    gain.connect(audioCtx.destination);
+
+    const osc1 = audioCtx.createOscillator();
+    osc1.type = profile.type;
+    osc1.frequency.value = profile.freqA;
+
+    const osc2 = audioCtx.createOscillator();
+    osc2.type = profile.type;
+    osc2.frequency.value = profile.freqB;
+
+    const lfo = audioCtx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = profile.lfoHz;
+    const lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = profile.lfoDepth;
+
+    lfo.connect(lfoGain);
+    lfoGain.connect(gain.gain);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+
+    osc1.start();
+    osc2.start();
+    lfo.start();
+
+    bgNodes = [osc1, osc2, lfo, gain, lfoGain];
+  }
+
+  function tone(freq, duration, type, volume, delay = 0) {
+    const audioCtx = ensureContext();
+    if (!audioCtx || !unlocked) return;
+
+    const startAt = audioCtx.currentTime + delay;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, startAt);
+    gain.gain.exponentialRampToValueAtTime(volume, startAt + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(startAt);
+    osc.stop(startAt + duration + 0.02);
+  }
+
+  function playSfx(name) {
+    if (!unlocked) return;
+
+    if (name === 'click') {
+      tone(540, 0.07, 'triangle', 0.03);
+      return;
+    }
+
+    if (name === 'place') {
+      tone(620, 0.08, 'triangle', 0.045);
+      tone(760, 0.07, 'triangle', 0.035, 0.06);
+      return;
+    }
+
+    if (name === 'invalid') {
+      tone(190, 0.12, 'square', 0.035);
+      return;
+    }
+
+    if (name === 'milestone') {
+      tone(700, 0.08, 'sine', 0.05);
+      tone(880, 0.1, 'sine', 0.05, 0.1);
+      return;
+    }
+
+    if (name === 'win') {
+      tone(660, 0.12, 'sine', 0.05);
+      tone(880, 0.15, 'sine', 0.06, 0.1);
+      tone(1100, 0.18, 'sine', 0.06, 0.24);
+      return;
+    }
+
+    if (name === 'miss') {
+      tone(220, 0.1, 'sawtooth', 0.025);
+      return;
+    }
+  }
+
+  function setScreenMusic(screenName) {
+    currentScreen = screenName;
+    const profiles = {
+      title: { type: 'sine', freqA: 220, freqB: 277, volume: 0.012, lfoHz: 0.09, lfoDepth: 0.004 },
+      game: { type: 'triangle', freqA: 170, freqB: 214, volume: 0.015, lfoHz: 0.12, lfoDepth: 0.005 },
+      win: { type: 'sine', freqA: 330, freqB: 392, volume: 0.015, lfoHz: 0.18, lfoDepth: 0.006 },
+      impact: { type: 'triangle', freqA: 196, freqB: 247, volume: 0.012, lfoHz: 0.1, lfoDepth: 0.004 },
+    };
+
+    const selected = profiles[screenName] || profiles.title;
+    startBackground(selected);
+  }
+
+  return {
+    unlock,
+    playSfx,
+    setScreenMusic,
+  };
+}
+
 // =============================================
 // FLOATING DROPLETS (title screen atmosphere)
 // =============================================
@@ -753,6 +922,21 @@ document.addEventListener('DOMContentLoaded', () => {
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', syncGameplayViewportVars, { passive: true });
   }
+
+  const unlockAudio = () => {
+    gameAudio.unlock();
+    document.removeEventListener('pointerdown', unlockAudio);
+    document.removeEventListener('keydown', unlockAudio);
+  };
+  document.addEventListener('pointerdown', unlockAudio, { passive: true });
+  document.addEventListener('keydown', unlockAudio, { passive: true });
+  gameAudio.setScreenMusic('title');
+
+  document.addEventListener('click', e => {
+    if (e.target.closest('button')) {
+      gameAudio.playSfx('click');
+    }
+  });
 
   // Wire all top-level UI controls once DOM is ready.
   // Preload pipeline module so first Start click is immediate.
