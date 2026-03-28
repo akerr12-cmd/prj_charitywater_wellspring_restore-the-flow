@@ -34,6 +34,49 @@
 .pause-overlay h2 { font-size: 2rem; font-weight: 800; color: var(--yellow); }
 .pause-buttons { display: flex; flex-direction: column; gap: 12px; min-width: 240px; }
 
+/* Temporary screen-jump HUD for fast visual QA */
+.temp-screen-hud {
+  position: fixed;
+  left: 10px;
+  bottom: 10px;
+  z-index: 95;
+  background: rgba(4, 22, 30, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+}
+
+.temp-screen-hud-head {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.82;
+  margin-bottom: 6px;
+}
+
+.temp-screen-hud-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.temp-screen-btn {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--white);
+  font-weight: 700;
+  font-size: 0.72rem;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.temp-screen-btn:hover {
+  background: rgba(79, 187, 239, 0.28);
+}
+
 /* Game Shell + Tokens */
 #game-screen {
   overflow-x: hidden;

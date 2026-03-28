@@ -137,6 +137,7 @@ function freshPipelineState() {
     deadlockRecoveryCount: 0,
     stealNextImpact: false,
     gameOver: false,
+    isPaused: false,
     outcome: 'in-progress',
     difficulty: DEFAULT_DIFFICULTY,
     milestoneHits: new Set(),
@@ -286,7 +287,7 @@ export function stopPipelineGame() {
 function startTimer() {
   clearInterval(P.timerInterval);
   P.timerInterval = setInterval(() => {
-    if (P.gameOver) return;
+    if (P.gameOver || P.isPaused) return;
     P.elapsedSeconds += P.timerRate;
 
     if (D.timeLimitSeconds > 0 && P.elapsedSeconds >= D.timeLimitSeconds) {
@@ -367,7 +368,7 @@ function renderBoosterBar() {
 }
 
 function activateBooster(boosterId) {
-  if (P.gameOver) return;
+  if (P.gameOver || P.isPaused) return;
 
   const charges = Math.max(0, P.boosters[boosterId] || 0);
   if (charges <= 0) {
@@ -465,7 +466,7 @@ function spawnNextChallenge() {
 }
 
 function onHandCardTap(index) {
-  if (P.gameOver) return;
+  if (P.gameOver || P.isPaused) return;
   if (index < 0 || index >= P.hand.length) return;
 
   P.selectedHandIndex = P.selectedHandIndex === index ? -1 : index;
@@ -474,7 +475,7 @@ function onHandCardTap(index) {
 }
 
 function onSlotTap(slot) {
-  if (P.gameOver) return;
+  if (P.gameOver || P.isPaused) return;
   if (P.selectedHandIndex < 0) return;
 
   const card = P.hand[P.selectedHandIndex];
@@ -1097,7 +1098,7 @@ function hasActiveLock() {
 }
 
 function checkForDeadlock() {
-  if (P.gameOver) return;
+  if (P.gameOver || P.isPaused) return;
   if (hasAnyValidMove()) return;
   if (hasActiveLock()) return;
 
@@ -1144,6 +1145,8 @@ function recoverFromDeadlock() {
 }
 
 function rerouteHand(autoTriggered) {
+  if (P.gameOver || P.isPaused) return;
+
   if (P.hand.length > 0) {
     P.discardPile.push(...P.hand);
   }
@@ -1343,8 +1346,20 @@ function getPipelineRunStats() {
   };
 }
 
+function pausePipelineGame() {
+  if (P.gameOver) return false;
+  P.isPaused = true;
+  return true;
+}
+
+function resumePipelineGame() {
+  P.isPaused = false;
+}
+
 window.initPipelineGame = initPipelineGame;
 window.stopPipelineGame = stopPipelineGame;
 window.getPipelineRunStats = getPipelineRunStats;
 window.getPipelineDebugData = getDebugSnapshot;
+window.pausePipelineGame = pausePipelineGame;
+window.resumePipelineGame = resumePipelineGame;
 window.getSolitaireRunStats = getPipelineRunStats;

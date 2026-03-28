@@ -104,6 +104,15 @@ window.gameAudio = gameAudio;
 function showScreen(name) {
   Object.values(screens).forEach(s => s.classList.remove('active'));
   if (screens[name]) screens[name].classList.add('active');
+
+  if (name !== 'game' && $('pause-overlay')) {
+    state.isPaused = false;
+    $('pause-overlay').classList.remove('open');
+    if (typeof window.resumePipelineGame === 'function') {
+      window.resumePipelineGame();
+    }
+  }
+
   gameAudio.setScreenMusic(name);
 }
 
@@ -611,13 +620,46 @@ function showToast(msg, cls) {
 
 function pauseGame() {
   if (state.gameOver) return;
+
+  if (typeof window.pausePipelineGame === 'function') {
+    const didPause = window.pausePipelineGame();
+    if (didPause === false) return;
+  }
+
   state.isPaused = true;
-  $('pause-overlay').classList.add('open');
+  $('pause-overlay')?.classList.add('open');
 }
 
 function resumeGame() {
+  if (typeof window.resumePipelineGame === 'function') {
+    window.resumePipelineGame();
+  }
+
   state.isPaused = false;
-  $('pause-overlay').classList.remove('open');
+  $('pause-overlay')?.classList.remove('open');
+}
+
+function bindTempScreenHud() {
+  const buttons = document.querySelectorAll('[data-screen-jump]');
+  if (!buttons.length) return;
+
+  buttons.forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const target = btn.dataset.screenJump;
+      if (!target) return;
+
+      if (target === 'game') {
+        await startSelectedMode();
+        return;
+      }
+
+      if (target === 'impact') {
+        populateImpactScreen();
+      }
+
+      showScreen(target);
+    });
+  });
 }
 
 // =============================================
@@ -1008,4 +1050,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Title: spawn background droplets
   spawnDroplets();
+
+  // Temporary QA controls for quick screen checks.
+  bindTempScreenHud();
 });
