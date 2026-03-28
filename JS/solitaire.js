@@ -244,11 +244,13 @@ function renderTableauColumn(colIndex) {
   const dynamicOffset = stackDepth > 0 && hostCanConstrain
     ? Math.max(8, Math.min(baseStackOffset, Math.floor((hostHeight - cardHeight - 12) / stackDepth)))
     : baseStackOffset;
-  const isMobileLayoutMode = window.innerHeight < 400 || window.innerWidth < 400;
+  const shortestViewportSide = Math.min(window.innerHeight || 0, window.innerWidth || 0);
+  const isMobileLayoutMode = shortestViewportSide <= 440;
+  const appliedStackOffset = isMobileLayoutMode ? 0 : dynamicOffset;
 
   column.forEach((card, depth) => {
     const cardEl = buildCardEl(card);
-    cardEl.style.top = isMobileLayoutMode ? '0px' : `${depth * dynamicOffset}px`;
+    cardEl.style.top = `${depth * appliedStackOffset}px`;
     cardEl.style.transition = 'top 0.25s ease';
     cardEl.dataset.col = colIndex;
     cardEl.dataset.index = depth;
@@ -256,9 +258,9 @@ function renderTableauColumn(colIndex) {
   });
 
   // Fallback sizing for layouts where the column host does not have explicit height.
-  const requiredHeight = cardHeight + stackDepth * dynamicOffset + 20;
-  const shortViewport = window.innerHeight > 0 && window.innerHeight <= 780;
-  const minMobileHeight = cardHeight + (shortViewport ? 90 : 140);
+  const requiredHeight = cardHeight + stackDepth * appliedStackOffset + 20;
+  const shortViewport = window.innerHeight > 0 && window.innerHeight <= 820;
+  const minMobileHeight = cardHeight + (shortViewport ? 56 : 140);
   container.style.minHeight = hostCanConstrain
     ? '0px'
     : `${Math.max(minMobileHeight, requiredHeight)}px`;
